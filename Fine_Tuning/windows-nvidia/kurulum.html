@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows + NVIDIA Kurulum Rehberi</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Windows + NVIDIA Kurulum Rehberi</h1>
+            <p>CUDA, PyTorch ve Fine-Tuning Ortaminin Kurulumu</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="../index.html">Ana Sayfa</a></li>
+                <li><a href="../windows-amd/index.html">Windows + AMD</a></li>
+                <li><a href="../linux-amd/index.html">Linux + AMD</a></li>
+                <li><a href="index.html" class="active">Windows + NVIDIA</a></li>
+                <li><a href="../linux-nvidia/index.html">Linux + NVIDIA</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">Ana Sayfa</a> &gt; <a href="index.html">Windows + NVIDIA</a> &gt; Kurulum
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <!-- Gereksinimler -->
+            <section>
+                <h2>Sistem Gereksinimleri</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bilesen</th>
+                            <th>Minimum</th>
+                            <th>Onerilen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Isletim Sistemi</td>
+                            <td>Windows 10 64-bit</td>
+                            <td>Windows 11 23H2</td>
+                        </tr>
+                        <tr>
+                            <td>GPU</td>
+                            <td>RTX 3060 (12GB)</td>
+                            <td>RTX 4090 (24GB)</td>
+                        </tr>
+                        <tr>
+                            <td>Sistem RAM</td>
+                            <td>16 GB</td>
+                            <td>32+ GB</td>
+                        </tr>
+                        <tr>
+                            <td>Python</td>
+                            <td>3.10</td>
+                            <td>3.10 veya 3.11</td>
+                        </tr>
+                        <tr>
+                            <td>CUDA Capability</td>
+                            <td>7.0+</td>
+                            <td>8.0+</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Kurulum Adimlari -->
+            <section>
+                <h2>Kurulum Adimlari</h2>
+
+                <div class="steps">
+                    <div class="step">
+                        <h3>NVIDIA Surucusunu Guncelleyin</h3>
+                        <p>
+                            <a href="https://www.nvidia.com/download/index.aspx" target="_blank">NVIDIA Surucu Indirme</a>
+                            sayfasindan GPU'nuz icin en son surucuyu indirin ve kurun.
+                        </p>
+                        <p>Surucu surumu 535+ olmalidir (CUDA 12+ destegi icin).</p>
+                    </div>
+
+                    <div class="step">
+                        <h3>Python Kurun</h3>
+                        <p>
+                            <a href="https://www.python.org/downloads/" target="_blank">python.org</a>'dan
+                            Python 3.10 veya 3.11 indirin. Kurulum sirasinda "Add Python to PATH" secenegini isaretleyin.
+                        </p>
+                        <pre><code># Kurulumu dogrula
+python --version
+# Python 3.10.x veya 3.11.x olmali</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Visual Studio Build Tools (Opsiyonel)</h3>
+                        <p>
+                            Bazi paketler C++ derleyicisi gerektirir. Visual Studio Community'yi
+                            "Desktop development with C++" secenegiyle kurun.
+                        </p>
+                        <p>
+                            <a href="https://visualstudio.microsoft.com/visual-cpp-build-tools/" target="_blank">Visual Studio Build Tools</a>
+                        </p>
+                    </div>
+
+                    <div class="step">
+                        <h3>Sanal Ortam Olusturun</h3>
+                        <pre><code>mkdir llm-finetuning
+cd llm-finetuning
+
+# Sanal ortam olustur
+python -m venv venv
+
+# Aktif et
+venv\Scripts\activate</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>PyTorch CUDA Kurun</h3>
+                        <pre><code># pip guncelle
+pip install --upgrade pip
+
+# PyTorch CUDA 12.6 ile (guncel)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+
+# Alternatif: CUDA 12.4 ile
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# Alternatif: CUDA 11.8 ile (eski GPU'lar icin)
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Kurulumu Dogrulayin</h3>
+                        <pre><code>python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}')"</code></pre>
+                        <p>Beklenen cikti:</p>
+                        <pre><code>PyTorch: 2.5.1+cu126
+CUDA: True
+GPU: NVIDIA GeForce RTX 4090</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Unsloth Kurulumu -->
+            <section>
+                <h2>Unsloth Kurulumu</h2>
+
+                <div class="alert alert-success">
+                    <strong>Onerilen:</strong> Unsloth, NVIDIA GPU'larda fine-tuning icin en hizli ve
+                    en bellek verimli aractir. Kurulumu cok basittir.
+                </div>
+
+                <h3>Temel Kurulum</h3>
+                <pre><code># Unsloth'u kur (PyTorch kurulu olmali)
+pip install unsloth
+
+# Ek bagimliliklar
+pip install transformers datasets accelerate peft trl</code></pre>
+
+                <h3>Kurulumu Dogrula</h3>
+                <pre><code>python -c "from unsloth import FastLanguageModel; print('Unsloth basariyla yuklendi!')"</code></pre>
+
+                <h3>Windows Icin Ek Notlar</h3>
+                <ul>
+                    <li>Triton kurulumu icin Windows fork gerekebilir</li>
+                    <li>Bazi hatalarda <code>dataset_num_proc=1</code> ayarlayin</li>
+                    <li>Sorun yasarsanız WSL2 veya Docker deneyin</li>
+                </ul>
+            </section>
+
+            <!-- Diger Kutuphaneler -->
+            <section>
+                <h2>Diger Kutuphaneler</h2>
+                <pre><code># Temel kutuphaneler
+pip install transformers datasets accelerate peft trl
+
+# BitsAndBytes (QLoRA icin)
+pip install bitsandbytes
+
+# Flash Attention 2 (Windows'ta sorunlu olabilir)
+# pip install flash-attn --no-build-isolation
+
+# Hugging Face Hub
+pip install huggingface-hub
+
+# Jupyter (interaktif calisma icin)
+pip install jupyterlab</code></pre>
+            </section>
+
+            <!-- WSL Alternatifi -->
+            <section>
+                <h2>Alternatif: WSL2 ile Linux Kullanimi</h2>
+
+                <p>
+                    Bazi araclar (Axolotl, Llama Factory) Windows'ta yerel olarak calismaz.
+                    WSL2 ile Linux ortami kullanabilirsiniz.
+                </p>
+
+                <pre><code># PowerShell'i yonetici olarak acin
+wsl --install -d Ubuntu-22.04
+
+# WSL2 kullanildigindan emin olun
+wsl --set-version Ubuntu-22.04 2
+
+# Ubuntu'ya giris
+wsl</code></pre>
+
+                <p>WSL2'de NVIDIA GPU otomatik olarak kullanilabilir (CUDA on WSL).</p>
+
+                <a href="../linux-nvidia/index.html" class="btn btn-outline">Linux + NVIDIA Rehberine Git</a>
+            </section>
+
+            <!-- Sorun Giderme -->
+            <section>
+                <h2>Sorun Giderme</h2>
+
+                <div class="card">
+                    <h3>torch.cuda.is_available() False dönuyor</h3>
+                    <ul>
+                        <li>NVIDIA surucusunun kurulu oldugundan emin olun</li>
+                        <li>PyTorch'un CUDA surumunu kurdugunuzdan emin olun (CPU degil)</li>
+                        <li>GPU'nun CUDA 7.0+ desteklediginden emin olun</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>Out of Memory (OOM) Hatasi</h3>
+                    <ul>
+                        <li>Batch size'i dusurun</li>
+                        <li>QLoRA (4-bit) kullanin</li>
+                        <li>Daha kucuk model secin</li>
+                        <li>Gradient checkpointing aktif edin</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Sonraki -->
+            <section>
+                <h2>Sonraki Adimlar</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Araclari Inceleyin</h3>
+                        <a href="araclar.html" class="btn btn-primary">Araclara Git</a>
+                    </div>
+                    <div class="card">
+                        <h3>Fine-Tuning Baslatin</h3>
+                        <a href="fine-tuning-rehberi.html" class="btn btn-outline">Rehbere Git</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Kaynaklar:
+                <a href="https://pytorch.org/get-started/locally/" target="_blank">PyTorch</a> |
+                <a href="https://docs.unsloth.ai/get-started/install-and-update/windows-installation" target="_blank">Unsloth Windows</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

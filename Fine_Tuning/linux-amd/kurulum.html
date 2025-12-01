@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux + AMD ROCm Kurulum Rehberi</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Linux + AMD ROCm Kurulum Rehberi</h1>
+            <p>Ubuntu'da ROCm, PyTorch ve Fine-Tuning Ortaminin Kurulumu</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="../index.html">Ana Sayfa</a></li>
+                <li><a href="../windows-amd/index.html">Windows + AMD</a></li>
+                <li><a href="index.html" class="active">Linux + AMD</a></li>
+                <li><a href="../windows-nvidia/index.html">Windows + NVIDIA</a></li>
+                <li><a href="../linux-nvidia/index.html">Linux + NVIDIA</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">Ana Sayfa</a> &gt; <a href="index.html">Linux + AMD</a> &gt; Kurulum
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <!-- Icindekiler -->
+            <div class="toc">
+                <h3>Icindekiler</h3>
+                <ul>
+                    <li><a href="#gereksinimler">1. Sistem Gereksinimleri</a></li>
+                    <li><a href="#yontem-secimi">2. Kurulum Yontemi Secimi</a></li>
+                    <li><a href="#docker-kurulum">3. Docker ile Kurulum (Onerilen)</a></li>
+                    <li><a href="#baremel-kurulum">4. Bare-Metal Kurulum</a></li>
+                    <li><a href="#pytorch-kurulum">5. PyTorch Kurulumu</a></li>
+                    <li><a href="#bitsandbytes">6. BitsAndBytes Kurulumu (QLoRA)</a></li>
+                    <li><a href="#dogrulama">7. Kurulum Dogrulama</a></li>
+                </ul>
+            </div>
+
+            <!-- Gereksinimler -->
+            <section id="gereksinimler">
+                <h2>1. Sistem Gereksinimleri</h2>
+
+                <h3>Desteklenen Linux Dagitimlari</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dagitim</th>
+                            <th>Surum</th>
+                            <th>Destek Durumu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Ubuntu</td>
+                            <td>22.04 LTS, 24.04 LTS</td>
+                            <td><span class="tag tag-stable">Resmi Destek</span></td>
+                        </tr>
+                        <tr>
+                            <td>RHEL</td>
+                            <td>8.x, 9.x</td>
+                            <td><span class="tag tag-stable">Resmi Destek</span></td>
+                        </tr>
+                        <tr>
+                            <td>SLES</td>
+                            <td>15 SP4, SP5</td>
+                            <td><span class="tag tag-stable">Resmi Destek</span></td>
+                        </tr>
+                        <tr>
+                            <td>Fedora</td>
+                            <td>39, 40</td>
+                            <td><span class="tag tag-experimental">Topluluk</span></td>
+                        </tr>
+                        <tr>
+                            <td>Arch Linux</td>
+                            <td>Rolling</td>
+                            <td><span class="tag tag-experimental">AUR</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Donanim Gereksinimleri</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bilesen</th>
+                            <th>Minimum</th>
+                            <th>Onerilen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>GPU VRAM</td>
+                            <td>16 GB</td>
+                            <td>24+ GB</td>
+                        </tr>
+                        <tr>
+                            <td>Sistem RAM</td>
+                            <td>32 GB</td>
+                            <td>64+ GB</td>
+                        </tr>
+                        <tr>
+                            <td>Depolama</td>
+                            <td>100 GB bos alan</td>
+                            <td>500+ GB NVMe SSD</td>
+                        </tr>
+                        <tr>
+                            <td>Python</td>
+                            <td>3.10</td>
+                            <td>3.10 veya 3.11</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-warning">
+                    <strong>Python Surumu:</strong> Python 3.13 kullanmayin - C binary interop sorunlari var.
+                    Python 3.10 veya 3.11 onerilir.
+                </div>
+            </section>
+
+            <!-- Yontem Secimi -->
+            <section id="yontem-secimi">
+                <h2>2. Kurulum Yontemi Secimi</h2>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Docker (Onerilen)</h3>
+                        <p>
+                            <span class="tag tag-stable">Kolay</span>
+                            <span class="tag tag-stable">Guvenli</span>
+                        </p>
+                        <ul>
+                            <li>Tum bagimliliklarınızı hazir olarak alirsiniz</li>
+                            <li>Sistem Python'unuza dokunmaz</li>
+                            <li>Tekrarlanabilir ortam</li>
+                            <li>AMD tarafindan test edilmis</li>
+                        </ul>
+                        <p><strong>Ne zaman kullanin:</strong> Ilk kez deniyorsaniz, hizli baslamak istiyorsanız</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Bare-Metal</h3>
+                        <p>
+                            <span class="tag tag-experimental">Ileri Duzey</span>
+                        </p>
+                        <ul>
+                            <li>Tam kontrol ve esneklik</li>
+                            <li>En iyi performans potansiyeli</li>
+                            <li>Sistem entegrasyonu</li>
+                            <li>Daha fazla yapilandirma gerektir</li>
+                        </ul>
+                        <p><strong>Ne zaman kullanin:</strong> Deneyimli kullanıcılar, ozel gereksinimler</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Docker Kurulum -->
+            <section id="docker-kurulum">
+                <h2>3. Docker ile Kurulum (Onerilen)</h2>
+
+                <div class="steps">
+                    <div class="step">
+                        <h3>Docker'i Kurun</h3>
+                        <pre><code># Docker Engine'i kur
+sudo apt update
+sudo apt install docker.io docker-compose -y
+
+# Kullaniciyi docker grubuna ekle
+sudo usermod -aG docker $USER
+
+# Cikis yapip tekrar giris yapin veya:
+newgrp docker</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>ROCm Container Toolkit</h3>
+                        <pre><code># AMD GPU'larin Docker'da calisması icin gerekli
+sudo apt install rocm-container-runtime -y</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>PyTorch ROCm Imajini Cekin</h3>
+                        <pre><code># En son PyTorch ROCm imaji
+docker pull rocm/pytorch:latest
+
+# Veya belirli bir surum
+docker pull rocm/pytorch:rocm6.2_ubuntu22.04_py3.10_pytorch_release_2.3.0</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Container'i Baslatin</h3>
+                        <pre><code>docker run -it --rm \
+    --device=/dev/kfd \
+    --device=/dev/dri \
+    --group-add=video \
+    --ipc=host \
+    --cap-add=SYS_PTRACE \
+    --security-opt seccomp=unconfined \
+    --shm-size 16G \
+    -v $(pwd):/workspace \
+    -w /workspace \
+    rocm/pytorch:latest</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Container Icinde Test</h3>
+                        <pre><code>python3 -c "import torch; print(torch.cuda.is_available())"
+# True olmali</code></pre>
+                    </div>
+                </div>
+
+                <h3>Docker Compose ile Kullanim</h3>
+                <pre><code># docker-compose.yml
+version: '3.8'
+services:
+  pytorch-rocm:
+    image: rocm/pytorch:latest
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    ipc: host
+    shm_size: 16G
+    volumes:
+      - ./:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true</code></pre>
+
+                <p>Calistirmak icin:</p>
+                <pre><code>docker-compose run pytorch-rocm</code></pre>
+            </section>
+
+            <!-- Bare-Metal Kurulum -->
+            <section id="baremel-kurulum">
+                <h2>4. Bare-Metal Kurulum</h2>
+
+                <h3>Ubuntu 24.04 LTS icin</h3>
+
+                <div class="steps">
+                    <div class="step">
+                        <h3>Sistemi Guncelleyin</h3>
+                        <pre><code>sudo apt update && sudo apt upgrade -y
+sudo reboot</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>AMDGPU-Install Aracini Indirin</h3>
+                        <pre><code># Ubuntu 24.04 (Noble) icin
+wget https://repo.radeon.com/amdgpu-install/6.2.2/ubuntu/noble/amdgpu-install_6.2.60202-1_all.deb
+
+# Ubuntu 22.04 (Jammy) icin
+# wget https://repo.radeon.com/amdgpu-install/6.2.2/ubuntu/jammy/amdgpu-install_6.2.60202-1_all.deb
+
+sudo apt install ./amdgpu-install_6.2.60202-1_all.deb</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>ROCm'u Kurun</h3>
+                        <pre><code># ROCm ve ilgili paketleri kur
+sudo amdgpu-install -y --usecase=rocm,hip,mllib
+
+# Alternatif: Sadece temel ROCm
+# sudo amdgpu-install -y --usecase=rocm</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Kullaniciyi Gruplara Ekleyin</h3>
+                        <pre><code>sudo usermod -a -G render,video $USER</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Sistemi Yeniden Baslatin</h3>
+                        <pre><code>sudo reboot</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>ROCm Kurulumunu Dogrulayin</h3>
+                        <pre><code># GPU'lari listele
+rocminfo
+
+# GPU durumunu goster
+rocm-smi
+
+# HIP surumunu kontrol et
+hipcc --version</code></pre>
+                    </div>
+                </div>
+
+                <h3>Ortam Degiskenlerini Ayarlayin</h3>
+                <pre><code># ~/.bashrc dosyasina ekleyin
+export ROCM_PATH=/opt/rocm
+export HIP_PATH=/opt/rocm
+export PATH=$PATH:$ROCM_PATH/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROCM_PATH/lib
+
+# GPU mimarisini belirtin (ornek: RX 7900 XTX icin gfx1100)
+export HSA_OVERRIDE_GFX_VERSION=11.0.0  # gfx1100 icin
+export PYTORCH_ROCM_ARCH=gfx1100
+
+# Degisiklikleri uygula
+source ~/.bashrc</code></pre>
+            </section>
+
+            <!-- PyTorch Kurulum -->
+            <section id="pytorch-kurulum">
+                <h2>5. PyTorch Kurulumu</h2>
+
+                <h3>Yontem 1: pip ile (Onerilen)</h3>
+                <pre><code># Python sanal ortami olustur
+python3 -m venv ~/venv-rocm
+source ~/venv-rocm/bin/activate
+
+# pip'i guncelle
+pip install --upgrade pip
+
+# PyTorch ROCm surumunu kur
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2</code></pre>
+
+                <h3>Yontem 2: Resmi ROCm Wheel'lari</h3>
+                <pre><code># Dogrudan AMD deposundan
+pip install --no-cache-dir \
+    https://repo.radeon.com/rocm/manylinux/rocm-rel-6.2/torch-2.3.0%2Brocm6.2-cp310-cp310-linux_x86_64.whl</code></pre>
+
+                <h3>Ek Kutuphaneler</h3>
+                <pre><code># Temel AI/ML kutuphaneleri
+pip install transformers datasets accelerate peft trl
+
+# Diger yararli kutuphaneler
+pip install scipy numpy sentencepiece protobuf huggingface-hub</code></pre>
+            </section>
+
+            <!-- BitsAndBytes -->
+            <section id="bitsandbytes">
+                <h2>6. BitsAndBytes Kurulumu (QLoRA Icin)</h2>
+
+                <p>
+                    BitsAndBytes, 4-bit quantization icin gereklidir (QLoRA).
+                    AMD GPU'lar icin ozel fork kullanilmalidir.
+                </p>
+
+                <div class="alert alert-warning">
+                    <strong>Not:</strong> pip'ten kurulan standart bitsandbytes AMD'de calismaz.
+                    AMD fork'unu kaynak koddan derlemeniz gerekir.
+                </div>
+
+                <h3>AMD Fork'unu Derleyin</h3>
+                <pre><code># Gerekli aracları kur
+sudo apt install build-essential cmake -y
+
+# AMD fork'unu klonla
+git clone --recurse https://github.com/ROCm/bitsandbytes
+cd bitsandbytes
+git checkout rocm_enabled_multi_backend
+
+# Bagimliliklari kur
+pip install -r requirements-dev.txt
+
+# GPU mimarinize gore derleyin
+# gfx1100: RX 7900 XTX/XT/GRE, W7900/W7800
+# gfx1101: RX 7800 XT, RX 7700 XT
+# gfx90a: MI250X, MI210
+# gfx942: MI300X
+
+cmake -DCOMPUTE_BACKEND=hip -DBNB_ROCM_ARCH="gfx1100" -S .
+make -j$(nproc)
+
+# Kur
+pip install .</code></pre>
+
+                <h3>Kurulumu Dogrula</h3>
+                <pre><code>python3 -c "import bitsandbytes as bnb; print(bnb.__version__)"</code></pre>
+            </section>
+
+            <!-- Dogrulama -->
+            <section id="dogrulama">
+                <h2>7. Kurulum Dogrulama</h2>
+
+                <h3>Kapsamli Test Scripti</h3>
+                <pre><code># test_rocm.py
+import sys
+print("=" * 60)
+print("ROCM KURULUM DOGRULAMA")
+print("=" * 60)
+
+# Python
+print(f"\n[1] Python: {sys.version}")
+
+# PyTorch
+try:
+    import torch
+    print(f"\n[2] PyTorch: {torch.__version__}")
+    print(f"    ROCm surumu: {torch.version.hip if hasattr(torch.version, 'hip') else 'N/A'}")
+    print(f"    CUDA mevcut: {torch.cuda.is_available()}")
+
+    if torch.cuda.is_available():
+        print(f"    GPU sayisi: {torch.cuda.device_count()}")
+        for i in range(torch.cuda.device_count()):
+            props = torch.cuda.get_device_properties(i)
+            print(f"    GPU {i}: {props.name}")
+            print(f"           VRAM: {props.total_memory / 1024**3:.2f} GB")
+
+        # GPU testi
+        print("\n    GPU hesaplama testi...")
+        x = torch.randn(5000, 5000, device="cuda")
+        y = torch.matmul(x, x)
+        print(f"    Matris carpimi: BASARILI")
+except Exception as e:
+    print(f"\n[2] PyTorch HATASI: {e}")
+
+# Transformers
+try:
+    import transformers
+    print(f"\n[3] Transformers: {transformers.__version__}")
+except ImportError:
+    print("\n[3] Transformers: KURULU DEGIL")
+
+# PEFT
+try:
+    import peft
+    print(f"\n[4] PEFT: {peft.__version__}")
+except ImportError:
+    print("\n[4] PEFT: KURULU DEGIL")
+
+# BitsAndBytes
+try:
+    import bitsandbytes as bnb
+    print(f"\n[5] BitsAndBytes: {bnb.__version__}")
+except ImportError:
+    print("\n[5] BitsAndBytes: KURULU DEGIL (QLoRA icin gerekli)")
+
+# Accelerate
+try:
+    import accelerate
+    print(f"\n[6] Accelerate: {accelerate.__version__}")
+except ImportError:
+    print("\n[6] Accelerate: KURULU DEGIL")
+
+print("\n" + "=" * 60)
+print("DOGRULAMA TAMAMLANDI")
+print("=" * 60)</code></pre>
+
+                <p>Calistirmak icin:</p>
+                <pre><code>python3 test_rocm.py</code></pre>
+
+                <h3>Beklenen Cikti</h3>
+                <pre><code>============================================================
+ROCM KURULUM DOGRULAMA
+============================================================
+
+[1] Python: 3.10.12 (...)
+
+[2] PyTorch: 2.3.0+rocm6.2
+    ROCm surumu: 6.2.xxxxx
+    CUDA mevcut: True
+    GPU sayisi: 1
+    GPU 0: AMD Radeon RX 7900 XTX
+           VRAM: 24.00 GB
+
+    GPU hesaplama testi...
+    Matris carpimi: BASARILI
+
+[3] Transformers: 4.45.0
+
+[4] PEFT: 0.13.0
+
+[5] BitsAndBytes: 0.44.0
+
+[6] Accelerate: 1.0.0
+
+============================================================
+DOGRULAMA TAMAMLANDI
+============================================================</code></pre>
+
+                <div class="alert alert-success">
+                    <strong>Basarili!</strong> Tum satirlarda surum numaralari gorunuyorsa ve
+                    GPU hesaplama testi basariliysa, kurulumunuz tamamdir.
+                </div>
+            </section>
+
+            <!-- Sorun Giderme -->
+            <section>
+                <h2>Sorun Giderme</h2>
+
+                <div class="card">
+                    <h3>GPU Bulunamadi Hatasi</h3>
+                    <pre><code># Kullanicinin gruplarda oldugundan emin ol
+groups
+# render ve video olmali
+
+# GPU'lari kontrol et
+ls -la /dev/kfd /dev/dri/render*
+
+# Izinleri kontrol et
+sudo chmod 666 /dev/kfd
+sudo chmod 666 /dev/dri/render*</code></pre>
+                </div>
+
+                <div class="card">
+                    <h3>"hipErrorNoBinaryForGpu" Hatasi</h3>
+                    <p>GPU mimarisi tanimlanmamis veya yanlis.</p>
+                    <pre><code># GPU mimarinizi ogrenmek için
+rocminfo | grep "Name:"
+
+# Ortam degiskenini ayarla (ornek gfx1100 icin)
+export HSA_OVERRIDE_GFX_VERSION=11.0.0</code></pre>
+                </div>
+
+                <div class="card">
+                    <h3>Docker'da GPU Gorunmuyor</h3>
+                    <pre><code># /dev/kfd ve /dev/dri izinlerini kontrol et
+ls -la /dev/kfd /dev/dri
+
+# Docker'i root olarak dene (test icin)
+sudo docker run --rm --device=/dev/kfd --device=/dev/dri rocm/pytorch:latest rocm-smi</code></pre>
+                </div>
+            </section>
+
+            <!-- Sonraki Adimlar -->
+            <section>
+                <h2>Sonraki Adimlar</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Araclari Inceleyin</h3>
+                        <p>Axolotl, Llama Factory ve diger araclar.</p>
+                        <a href="araclar.html" class="btn btn-primary">Araclara Git</a>
+                    </div>
+                    <div class="card">
+                        <h3>Fine-Tuning Baslatin</h3>
+                        <p>Adim adim fine-tuning rehberi.</p>
+                        <a href="fine-tuning-rehberi.html" class="btn btn-outline">Rehbere Git</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Kaynaklar:
+                <a href="https://rocm.docs.amd.com/projects/install-on-linux/en/latest/" target="_blank">ROCm Installation Guide</a> |
+                <a href="https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/3rd-party/pytorch-install.html" target="_blank">PyTorch ROCm</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

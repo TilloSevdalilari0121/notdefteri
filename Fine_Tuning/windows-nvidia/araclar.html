@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows + NVIDIA Fine-Tuning Araclari</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Windows + NVIDIA Fine-Tuning Araclari</h1>
+            <p>Unsloth, RTX AI Toolkit ve Diger Populer Araclar</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="../index.html">Ana Sayfa</a></li>
+                <li><a href="../windows-amd/index.html">Windows + AMD</a></li>
+                <li><a href="../linux-amd/index.html">Linux + AMD</a></li>
+                <li><a href="index.html" class="active">Windows + NVIDIA</a></li>
+                <li><a href="../linux-nvidia/index.html">Linux + NVIDIA</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">Ana Sayfa</a> &gt; <a href="index.html">Windows + NVIDIA</a> &gt; Araclar
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <!-- Unsloth -->
+            <section>
+                <h2>1. Unsloth (En Cok Onerilen)</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">En Hizli</span>
+                        <span class="tag tag-nvidia">NVIDIA Optimize</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        Unsloth, fine-tuning'i 2-5x hizlandiran ve bellek kullanimini %70-80 azaltan
+                        acik kaynakli bir kutuphanedir. NVIDIA GPU'lar icin ozel optimizasyonlar icerir.
+                    </p>
+
+                    <h3>Avantajlar</h3>
+                    <ul>
+                        <li><strong>2-5x Hizli:</strong> Flash Attention 2'den bile hizli</li>
+                        <li><strong>%70-80 Az Bellek:</strong> Daha buyuk modeller veya batch</li>
+                        <li><strong>Kolay Kullanim:</strong> Birkac satir kodla fine-tuning</li>
+                        <li><strong>Windows Destegi:</strong> Yerel Windows'ta calisir</li>
+                        <li><strong>RTX 50 Serisi:</strong> Blackwell destegi mevcut</li>
+                    </ul>
+
+                    <h3>Kurulum</h3>
+                    <pre><code>pip install unsloth</code></pre>
+
+                    <h3>Temel Kullanim</h3>
+                    <pre><code>from unsloth import FastLanguageModel
+
+# Model yukle (4bit quantization ile)
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="unsloth/Llama-3.2-3B",
+    max_seq_length=2048,
+    load_in_4bit=True,
+)
+
+# LoRA ekle
+model = FastLanguageModel.get_peft_model(
+    model,
+    r=16,
+    lora_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0,
+    bias="none",
+)
+
+# SFTTrainer ile egit
+from trl import SFTTrainer, SFTConfig
+
+trainer = SFTTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    train_dataset=dataset,
+    args=SFTConfig(
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=4,
+        max_steps=100,
+        learning_rate=2e-4,
+        fp16=not torch.cuda.is_bf16_supported(),
+        bf16=torch.cuda.is_bf16_supported(),
+        output_dir="outputs",
+    ),
+)
+
+trainer.train()</code></pre>
+
+                    <p>
+                        <a href="https://docs.unsloth.ai/" target="_blank" class="btn btn-outline">Dokumantasyon</a>
+                        <a href="https://github.com/unslothai/unsloth" target="_blank" class="btn btn-outline">GitHub</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- RTX AI Toolkit -->
+            <section>
+                <h2>2. NVIDIA RTX AI Toolkit</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">Resmi</span>
+                        <span class="tag tag-nvidia">NVIDIA</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        NVIDIA'nin resmi fine-tuning ve dagitim araci. AI Workbench ile
+                        entegre calisir ve TensorRT-LLM ile optimizasyon saglar.
+                    </p>
+
+                    <h3>Ozellikler</h3>
+                    <ul>
+                        <li>LoRA ve QLoRA destegi</li>
+                        <li>TensorRT-LLM entegrasyonu</li>
+                        <li>Multi-LoRA dagitimi</li>
+                        <li>NIM ile bulut entegrasyonu</li>
+                    </ul>
+
+                    <h3>Gereksinimler</h3>
+                    <ul>
+                        <li>RTX GPU (16GB+ VRAM onerilir)</li>
+                        <li>NVIDIA AI Workbench</li>
+                        <li>Docker Desktop 4.31.0+</li>
+                    </ul>
+
+                    <p>
+                        <a href="https://github.com/NVIDIA/RTX-AI-Toolkit" target="_blank" class="btn btn-outline">GitHub</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- PyTorch + PEFT -->
+            <section>
+                <h2>3. PyTorch + PEFT + TRL</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">Esnek</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        Hugging Face'in PEFT ve TRL kutuphaneleri ile dogrudan PyTorch kullanarak
+                        fine-tuning. Tam kontrol isteyenler icin.
+                    </p>
+
+                    <h3>Kurulum</h3>
+                    <pre><code>pip install transformers datasets peft trl accelerate bitsandbytes</code></pre>
+
+                    <h3>Kullanim</h3>
+                    <pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model
+from trl import SFTTrainer
+
+# 4-bit quantization
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.2-3B",
+    quantization_config=bnb_config,
+    device_map="auto"
+)
+
+# LoRA
+lora_config = LoraConfig(r=16, lora_alpha=32, target_modules=["q_proj", "v_proj"])
+model = get_peft_model(model, lora_config)
+
+# Egit
+trainer = SFTTrainer(model=model, train_dataset=dataset, ...)
+trainer.train()</code></pre>
+
+                    <p>
+                        <a href="https://huggingface.co/docs/peft" target="_blank" class="btn btn-outline">PEFT Docs</a>
+                        <a href="https://huggingface.co/docs/trl" target="_blank" class="btn btn-outline">TRL Docs</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- WSL Araclari -->
+            <section>
+                <h2>4. WSL ile Kullanilabilir Araclar</h2>
+
+                <p>Bu araclar yerel Windows'ta calismaz ancak WSL2 ile kullanilabilir:</p>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Axolotl</h3>
+                        <p>YAML tabanli esnek fine-tuning araci.</p>
+                        <p><span class="tag tag-experimental">WSL Gerekli</span></p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Llama Factory</h3>
+                        <p>Web UI ile kolay fine-tuning.</p>
+                        <p><span class="tag tag-experimental">WSL/Docker</span></p>
+                    </div>
+
+                    <div class="card">
+                        <h3>DeepSpeed</h3>
+                        <p>Dagitik egitim ve bellek optimizasyonu.</p>
+                        <p><span class="tag tag-experimental">WSL Onerilir</span></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Karsilastirma -->
+            <section>
+                <h2>Hangi Araci Secmeliyim?</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Durum</th>
+                            <th>Onerilen Arac</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Ilk kez fine-tuning yapacaklar</td>
+                            <td><strong>Unsloth</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Hiz ve verimlilik onceligi</td>
+                            <td><strong>Unsloth</strong></td>
+                        </tr>
+                        <tr>
+                            <td>NVIDIA ekosisteminde kalmak</td>
+                            <td><strong>RTX AI Toolkit</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Tam kontrol ve ozellestime</td>
+                            <td><strong>PyTorch + PEFT</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Web UI ile kolay kullanim</td>
+                            <td><strong>Llama Factory (WSL)</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Coklu GPU egitimi</td>
+                            <td><strong>Axolotl + DeepSpeed (WSL)</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Kaynaklar:
+                <a href="https://docs.unsloth.ai/" target="_blank">Unsloth</a> |
+                <a href="https://github.com/NVIDIA/RTX-AI-Toolkit" target="_blank">RTX AI Toolkit</a> |
+                <a href="https://huggingface.co/docs/peft" target="_blank">PEFT</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
