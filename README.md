@@ -25,7 +25,7 @@ Gelişmiş özelliklerle donatılmış, Türkçe arayüzlü masaüstü not alma 
 - **Bulut Senkronizasyon**: Google Drive ve Dropbox desteği
 - **Şablonlar**: Hazır not şablonları kullanın
 - **Notlar Arası Bağlantı**: [[Not Adı]] formatıyla notlar arası link
-
+![Screenshots of Not Defteri Pro](9.png)
 ## Gereksinimler
 
 - Python 3.11 veya üzeri
