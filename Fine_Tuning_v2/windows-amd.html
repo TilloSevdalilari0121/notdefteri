@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows ve AMD için İnce Ayar Rehberi</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            padding: 20px 0;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        .main {
+            padding: 20px;
+            background: #fff;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        h2, h3 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        p {
+            text-align: justify;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .navigation {
+            margin-top: 20px;
+        }
+        .navigation a {
+            text-decoration: none;
+            color: #3366cc;
+            font-size: 1.2rem;
+        }
+        .navigation a:hover {
+            text-decoration: underline;
+        }
+        .important {
+            background-color: #fff3cd;
+            border-left: 6px solid #ffeeba;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Windows ve AMD Platformunda İnce Ayar</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="main">
+            <p class="navigation"><a href="index.html">&larr; Ana Sayfaya Dön</a></p>
+
+            <h2>Giriş ve Temel Kavramlar</h2>
+            <p>
+                Bu rehber, Windows işletim sistemine sahip ve <strong>AMD Ryzen™ AI</strong> işlemcili bir bilgisayarda yapay zeka modelleri için ince ayar (fine-tuning) ve dağıtım (deployment) sürecini anlatmaktadır. Özellikle AMD'nin <strong>NPU (Yapay Sinir Ağı İşlem Birimi)</strong> donanımından faydalanarak, modelleri daha verimli ve düşük güç tüketimiyle çalıştırmaya odaklanacağız.
+            </p>
+
+            <div class="important">
+                <p><strong>Önemli Not:</strong> İnce ayar (fine-tuning) süreci, modelin yeniden eğitilmesidir ve bu işlem genellikle standart yapay zeka kütüphaneleri (PyTorch, TensorFlow) ile yapılır. AMD'nin sağladığı <strong>Ryzen AI Software</strong> ise, bu eğitilmiş modeli alıp AMD NPU'sunda en verimli şekilde çalışacak formata dönüştürme (optimizasyon ve derleme) görevini üstlenir. Akış bu iki ana adımdan oluşur.</p>
+            </div>
+
+            <h3>Gerekli Donanım ve Yazılımlar</h3>
+            <ul>
+                <li><strong>Donanım:</strong> NPU içeren bir AMD Ryzen™ AI işlemcili dizüstü bilgisayar. (Örn: AMD Ryzen AI MAX+ 395 serisi).</li>
+                <li><strong>İşletim Sistemi:</strong> Windows 11</li>
+                <li><strong>Yazılımlar:</strong>
+                    <ul>
+                        <li>Python 3.9 veya üstü</li>
+                        <li>Visual Studio 2022 Community Edition (C++ ile masaüstü geliştirme araçları yüklü)</li>
+                        <li>Git</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h2>Adım 1: Ortam Kurulumu</h2>
+            <p>
+                İşe, Ryzen AI yazılımını ve bağımlılıklarını kurarak başlıyoruz.
+            </p>
+            <ol>
+                <li><strong>Visual Studio Kurulumu:</strong> <a href="https://visualstudio.microsoft.com/tr/vs/community/" target="_blank">Visual Studio Community</a>'yi indirin ve yükleyiciyi çalıştırırken "C++ ile masaüstü geliştirme" (Desktop development with C++) iş yükünü seçtiğinizden emin olun.</li>
+                <li><strong>Python Kurulumu:</strong> <a href="https://www.python.org/downloads/" target="_blank">Python</a>'ı resmi sitesinden indirip kurun. Kurulum sırasında "Add Python to PATH" seçeneğini işaretlemeyi unutmayın.</li>
+                <li>
+                    <strong>Ryzen AI Software Klonlama:</strong> Komut istemini (CMD) veya PowerShell'i açın ve aşağıdaki komutla Ryzen AI deposunu klonlayın:
+                    <pre><code>git clone https://github.com/amd/ryzen-ai-software.git</code></pre>
+                </li>
+                <li>
+                    <strong>Kurulumu Başlatma:</strong> Klonladığınız klasörün içine girin ve kurulum betiğini çalıştırın. Bu işlem, gerekli sürücüleri ve araçları sisteminize kuracaktır.
+                    <pre><code>cd ryzen-ai-software
+setup.bat</code></pre>
+                </li>
+                <li>
+                    <strong>Python Sanal Ortamı ve Bağımlılıklar:</strong> Gerekli Python kütüphanelerini izole bir ortamda kurmak en iyi pratiktir.
+                    <pre><code>python -m venv ryzen-ai-env
+ryzen-ai-env\Scripts\activate
+pip install -r requirements.txt</code></pre>
+                </li>
+            </ol>
+
+            <h2>Adım 2: İnce Ayar ve Modelin Hazırlanması</h2>
+            <p>
+                Bu adımda, standart bir kütüphane olan PyTorch kullanarak bir modeli kendi veri setinizle ince ayar yapacağız ve ardından AMD NPU için hazırlayacağız.
+            </p>
+            <h3>1. Modelin İnce Ayarlanması (PyTorch)</h3>
+            <p>
+                Bu aşama, tamamen standart bir yapay zeka eğitimidir. Herhangi bir AMD'ye özel araç kullanmayız. Örneğin, bir görüntü sınıflandırma modelini kendi resimlerinizle eğittiğinizi varsayalım. Eğitim tamamlandığında, elinizde modelin ağırlıklarını içeren bir <code>.pth</code> dosyası olur.
+            </p>
+
+            <h3>2. Modeli ONNX Formatına Dönüştürme</h3>
+            <p>
+                AMD Ryzen AI, modelleri çalıştırmak için <strong>ONNX (Open Neural Network Exchange)</strong> formatını kullanır. PyTorch ile eğittiğiniz modeli bu formata dönüştürmeniz gerekir.
+            </p>
+            <pre><code># sample_export_to_onnx.py
+import torch
+from torchvision.models import resnet18 # Örnek model
+
+# Eğitilmiş modelinizi yükleyin
+model = resnet18()
+model.load_state_dict(torch.load("ince_ayarli_model.pth"))
+model.eval()
+
+# Modelinize uygun bir örnek girdi oluşturun
+ornek_girdi = torch.randn(1, 3, 224, 224)
+
+# Modeli ONNX formatına çevirin
+torch.onnx.export(model,
+                  ornek_girdi,
+                  "model.onnx",
+                  export_params=True,
+                  opset_version=13, # Ryzen AI tarafından desteklenen bir sürüm
+                  input_names = ['input'],
+                  output_names = ['output'])
+
+print("Model başarıyla model.onnx olarak dışa aktarıldı.")
+</code></pre>
+
+            <h2>Adım 3: Modeli NPU için Optimize Etme ve Çalıştırma</h2>
+            <p>
+                Artık <code>.onnx</code> formatında bir modelimiz var. Şimdi bu modeli AMD'nin araçlarıyla NPU üzerinde çalışacak hale getireceğiz.
+            </p>
+            <h3>1. Niceleme (Quantization)</h3>
+            <p>
+                Niceleme, modelin parametrelerini daha düşük hassasiyetli veri tiplerine (örneğin 32-bit float'tan 8-bit integer'a) dönüştürme işlemidir. Bu, NPU üzerinde çok daha hızlı ve verimli çalışmasını sağlar. Ryzen AI, bu işlem için <strong>AMD Quark</strong> aracını sunar.
+            </p>
+            <pre><code># Komut satırından niceleme aracını çalıştırma
+vai_quantize --model_path model.onnx --output_path quantized_model.onnx</code></pre>
+
+            <h3>2. NPU Üzerinde Çıkarım (Inference) Yapma</h3>
+            <p>
+                Nicelediğimiz modeli artık ONNX Runtime kullanarak NPU üzerinde çalıştırabiliriz. Bunu yaparken, yürütme sağlayıcısı olarak <code>VitisAIExecutionProvider</code>'ı belirtmemiz yeterlidir. Bu, ONNX Runtime'a modeli NPU'ya göndermesini söyler.
+            </p>
+            <pre><code># sample_inference_on_npu.py
+import onnxruntime as ort
+import numpy as np
+
+# Yürütme sağlayıcısını NPU olarak belirtin
+providers = ['VitisAIExecutionProvider']
+provider_options = [{'config_file': 'vaip_config.json'}] # Gerekli konfigürasyon dosyası
+
+# ONNX oturumunu başlatın
+session = ort.InferenceSession("quantized_model.onnx", providers=providers, provider_options=provider_options)
+
+# Örnek bir girdi verisi hazırlayın (gerçek verinize uygun olmalı)
+input_data = np.random.randn(1, 3, 224, 224).astype(np.float32)
+
+# Modeli çalıştırın
+input_name = session.get_inputs()[0].name
+output_name = session.get_outputs()[0].name
+result = session.run([output_name], {input_name: input_data})
+
+print("NPU üzerinde çıkarım başarıyla tamamlandı. Sonuç:", result)
+</code></pre>
+
+            <h2>Sonuç</h2>
+            <p>
+                Bu rehberde, Windows üzerinde AMD Ryzen AI platformu için bir yapay zeka modelinin nasıl hazırlanacağını ve NPU'da nasıl çalıştırılacağını öğrendik. Süreç, standart araçlarla ince ayar yapma ve ardından AMD'nin özel araçlarıyla modeli optimize etme adımlarını içermektedir. Daha fazla detay ve gelişmiş kullanım senaryoları için <a href="https://ryzenai.docs.amd.com/en/latest/" target="_blank">resmi Ryzen AI dokümantasyonunu</a> inceleyebilirsiniz.
+            </p>
+
+            <p class="navigation" style="text-align: right;"><a href="index.html">Ana Sayfaya Dön &rarr;</a></p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Detaylı İnce Ayar Rehberi</p>
+    </footer>
+</body>
+</html>
