@@ -1,0 +1,51 @@
+# Not Defteri Pro - Gereksinimler
+# Python 3.11.9 için
+
+# Temel gereksinimler (zorunlu)
+PyQt5>=5.15.9
+
+# Opsiyonel bağımlılıklar
+# Şifreleme için
+cryptography>=41.0.0
+
+# Markdown desteği için
+markdown>=3.5.0
+Pygments>=2.17.0
+
+# Web içerik çıkarma için
+beautifulsoup4>=4.12.0
+readability-lxml>=0.8.1
+lxml>=4.9.0
+
+# Çeviri desteği için
+deep-translator>=1.11.4
+
+# Bulut senkronizasyon için (opsiyonel)
+# Google Drive
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.1.0
+
+# Dropbox
+dropbox>=11.36.0
+
+# Kurulum:
+# pip install -r requirements.txt
+#
+# Sadece temel özellikler için:
+# pip install PyQt5>=5.15.9
+#
+# Şifreleme ile:
+# pip install PyQt5 cryptography
+#
+# Markdown ile:
+# pip install PyQt5 markdown Pygments
+#
+# Web clipper ile:
+# pip install PyQt5 beautifulsoup4 readability-lxml
+#
+# Çeviri ile:
+# pip install PyQt5 deep-translator
+#
+# Bulut senkronizasyon ile:
+# pip install PyQt5 google-api-python-client google-auth-httplib2 google-auth-oauthlib dropbox
