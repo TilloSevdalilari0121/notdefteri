@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows + AMD Adim Adim Fine-Tuning Rehberi</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Adim Adim Fine-Tuning Rehberi</h1>
+            <p>Windows + AMD ile LoRA Kullanarak LLM Fine-Tuning</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="../index.html">Ana Sayfa</a></li>
+                <li><a href="index.html" class="active">Windows + AMD</a></li>
+                <li><a href="../linux-amd/index.html">Linux + AMD</a></li>
+                <li><a href="../windows-nvidia/index.html">Windows + NVIDIA</a></li>
+                <li><a href="../linux-nvidia/index.html">Linux + NVIDIA</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">Ana Sayfa</a> &gt; <a href="index.html">Windows + AMD</a> &gt; Fine-Tuning Rehberi
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <!-- Onkosullar -->
+            <div class="alert alert-info">
+                <strong>Onkosullar:</strong> Bu rehberi takip etmeden once
+                <a href="kurulum.html">Kurulum Rehberi</a>'ni tamamladiginizdan emin olun.
+            </div>
+
+            <!-- Icindekiler -->
+            <div class="toc">
+                <h3>Bu Rehberde</h3>
+                <ul>
+                    <li><a href="#hazirlik">1. Hazirlik</a></li>
+                    <li><a href="#veri-seti">2. Veri Seti Hazirlama</a></li>
+                    <li><a href="#model-yukleme">3. Model Yukleme</a></li>
+                    <li><a href="#lora-yapilandirma">4. LoRA Yapilandirmasi</a></li>
+                    <li><a href="#egitim">5. Egitim Sureci</a></li>
+                    <li><a href="#kaydetme">6. Model Kaydetme</a></li>
+                    <li><a href="#test">7. Test ve Degerlendirme</a></li>
+                    <li><a href="#ipuclari">8. Ipuclari ve Optimizasyonlar</a></li>
+                </ul>
+            </div>
+
+            <!-- Hazirlik -->
+            <section id="hazirlik">
+                <h2>1. Hazirlik</h2>
+
+                <h3>Proje Klasoru Olusturma</h3>
+                <pre><code># Proje klasoru
+mkdir llm-finetuning-project
+cd llm-finetuning-project
+
+# Alt klasorler
+mkdir data models outputs logs</code></pre>
+
+                <h3>Gerekli Kutuphanelerin Kontrolu</h3>
+                <pre><code># kontrol.py
+import torch
+import transformers
+import peft
+import datasets
+import accelerate
+
+print("Kutuphaneler hazir!")
+print(f"GPU mevcut: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")</code></pre>
+
+                <h3>Hugging Face'e Giris</h3>
+                <p>
+                    Llama gibi bazi modeller icin Hugging Face hesabi ve erisim izni gereklidir.
+                </p>
+                <pre><code># Terminal'de
+huggingface-cli login
+
+# Token'inizi girin (https://huggingface.co/settings/tokens)</code></pre>
+            </section>
+
+            <!-- Veri Seti -->
+            <section id="veri-seti">
+                <h2>2. Veri Seti Hazirlama</h2>
+
+                <h3>Veri Seti Formati</h3>
+                <p>
+                    Fine-tuning icin verilerinizi uygun formatta hazirlmaniz gerekiyor.
+                    En yaygin formatlar:
+                </p>
+
+                <h4>Format 1: Instruction Format (Onerilen)</h4>
+                <pre><code>{
+    "instruction": "Asagidaki metni ozetle.",
+    "input": "Python, yuksek seviyeli bir programlama dilidir...",
+    "output": "Python, okunabilir ve kolay ogrenilen bir programlama dilidir."
+}</code></pre>
+
+                <h4>Format 2: Chat Format</h4>
+                <pre><code>{
+    "conversations": [
+        {"role": "user", "content": "Python nedir?"},
+        {"role": "assistant", "content": "Python, yuksek seviyeli bir programlama dilidir..."}
+    ]
+}</code></pre>
+
+                <h4>Format 3: Basit Text Format</h4>
+                <pre><code>{
+    "text": "### Soru: Python nedir?\n\n### Cevap: Python, yuksek seviyeli..."
+}</code></pre>
+
+                <h3>Ornek Veri Seti Olusturma</h3>
+                <pre><code># veri_hazirla.py
+import json
+
+# Ornek egitim verileri
+training_data = [
+    {
+        "instruction": "Asagidaki cumleyi Turkce'ye cevir.",
+        "input": "Hello, how are you?",
+        "output": "Merhaba, nasilsin?"
+    },
+    {
+        "instruction": "Verilen sayinin karesini hesapla.",
+        "input": "5",
+        "output": "25"
+    },
+    {
+        "instruction": "Asagidaki metni ozetle.",
+        "input": "Yapay zeka, makinelerin insan zekasini taklit etmesini saglayan bir teknolojidir. Makine ogrenimi, derin ogrenme ve dogal dil isleme gibi alt alanlari vardir.",
+        "output": "Yapay zeka, makinelerin insan zekasini taklit ettigini bir teknolojidir."
+    }
+    # ... daha fazla ornek ekleyin (en az 100+ onerilen)
+]
+
+# JSON olarak kaydet
+with open("data/training_data.json", "w", encoding="utf-8") as f:
+    json.dump(training_data, f, ensure_ascii=False, indent=2)
+
+print(f"Toplam {len(training_data)} ornek kaydedildi.")</code></pre>
+
+                <h3>Hazir Veri Seti Kullanma</h3>
+                <pre><code>from datasets import load_dataset
+
+# Hugging Face'den veri seti yukle
+dataset = load_dataset("tatsu-lab/alpaca")
+
+# Veya yerel dosyadan
+dataset = load_dataset("json", data_files="data/training_data.json")
+
+print(dataset)
+print(dataset["train"][0])</code></pre>
+
+                <div class="alert alert-warning">
+                    <strong>Onemli:</strong> Kaliteli fine-tuning icin en az 100-1000 ornek onerilir.
+                    Daha az ornekle de calisir ancak sonuclar daha az tutarli olabilir.
+                </div>
+            </section>
+
+            <!-- Model Yukleme -->
+            <section id="model-yukleme">
+                <h2>3. Model Yukleme</h2>
+
+                <h3>Model Secimi</h3>
+                <p>Windows + AMD icin onerilen modeller:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Boyut</th>
+                            <th>Min. VRAM (LoRA)</th>
+                            <th>Hugging Face ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Llama 3.2 3B</td>
+                            <td>3B</td>
+                            <td>~8 GB</td>
+                            <td>meta-llama/Llama-3.2-3B</td>
+                        </tr>
+                        <tr>
+                            <td>Mistral 7B</td>
+                            <td>7B</td>
+                            <td>~14 GB</td>
+                            <td>mistralai/Mistral-7B-v0.3</td>
+                        </tr>
+                        <tr>
+                            <td>Phi-3 Mini</td>
+                            <td>3.8B</td>
+                            <td>~10 GB</td>
+                            <td>microsoft/Phi-3-mini-4k-instruct</td>
+                        </tr>
+                        <tr>
+                            <td>Qwen2.5 3B</td>
+                            <td>3B</td>
+                            <td>~8 GB</td>
+                            <td>Qwen/Qwen2.5-3B</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Model Yukleme Kodu</h3>
+                <pre><code>import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Model adi
+model_id = "meta-llama/Llama-3.2-3B"  # veya baska bir model
+
+# Tokenizer yukle
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+# Ozel token ayarlari
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+# Model yukle
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,     # Yari hassasiyet (bellek tasarrufu)
+    device_map="auto",              # Otomatik GPU yerlesimi
+    trust_remote_code=True          # Bazi modeller icin gerekli
+)
+
+print(f"Model yuklendi: {model_id}")
+print(f"Toplam parametre: {model.num_parameters():,}")</code></pre>
+
+                <div class="alert alert-info">
+                    <strong>Not:</strong> <code>device_map="auto"</code> modeli otomatik olarak
+                    GPU'ya yukler. Bellek yetersizse CPU'ya tasabilir.
+                </div>
+            </section>
+
+            <!-- LoRA Yapilandirmasi -->
+            <section id="lora-yapilandirma">
+                <h2>4. LoRA Yapilandirmasi</h2>
+
+                <h3>LoRA Nedir?</h3>
+                <p>
+                    LoRA (Low-Rank Adaptation), modelin tum agirliklarini degistirmek yerine
+                    kucuk "adapter" katmanlari ekler. Bu sayede:
+                </p>
+                <ul>
+                    <li>Bellek kullanimi %90+ azalir</li>
+                    <li>Egitim suresi kisalir</li>
+                    <li>Orijinal model korunur</li>
+                </ul>
+
+                <h3>LoRA Parametreleri</h3>
+                <pre><code>from peft import LoraConfig, get_peft_model, TaskType
+
+lora_config = LoraConfig(
+    # Temel parametreler
+    r=16,                    # Rank - dusuk = az parametre, yuksek = daha fazla kapasite
+    lora_alpha=32,           # Olcekleme faktoru (genellikle r * 2)
+    lora_dropout=0.1,        # Dropout orani (overfitting onleme)
+
+    # Hedef katmanlar (model mimarisine gore degisir)
+    target_modules=[
+        "q_proj",    # Query projection
+        "k_proj",    # Key projection
+        "v_proj",    # Value projection
+        "o_proj",    # Output projection
+        "gate_proj", # MLP gate
+        "up_proj",   # MLP up
+        "down_proj"  # MLP down
+    ],
+
+    # Diger ayarlar
+    bias="none",             # Bias egitimi: "none", "all", "lora_only"
+    task_type=TaskType.CAUSAL_LM  # Gorev turu
+)
+
+# LoRA'yi modele uygula
+model = get_peft_model(model, lora_config)
+
+# Egitilecek parametre sayisini goster
+model.print_trainable_parameters()</code></pre>
+
+                <p>Ornek cikti:</p>
+                <pre><code>trainable params: 6,815,744 || all params: 3,213,902,848 || trainable%: 0.212%</code></pre>
+
+                <h3>Parametre Onerileri</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parametre</th>
+                            <th>Dusuk Bellek</th>
+                            <th>Dengeli</th>
+                            <th>Yuksek Kalite</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>r (rank)</td>
+                            <td>8</td>
+                            <td>16</td>
+                            <td>32-64</td>
+                        </tr>
+                        <tr>
+                            <td>lora_alpha</td>
+                            <td>16</td>
+                            <td>32</td>
+                            <td>64-128</td>
+                        </tr>
+                        <tr>
+                            <td>lora_dropout</td>
+                            <td>0.05</td>
+                            <td>0.1</td>
+                            <td>0.1</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Egitim -->
+            <section id="egitim">
+                <h2>5. Egitim Sureci</h2>
+
+                <h3>Veri Seti Hazirligi</h3>
+                <pre><code>from datasets import load_dataset
+
+# Veri setini yukle
+dataset = load_dataset("json", data_files="data/training_data.json", split="train")
+
+# Formatlama fonksiyonu
+def format_instruction(example):
+    """Instruction formatini model girdisine donustur"""
+    if example.get("input"):
+        text = f"""### Instruction:
+{example['instruction']}
+
+### Input:
+{example['input']}
+
+### Response:
+{example['output']}"""
+    else:
+        text = f"""### Instruction:
+{example['instruction']}
+
+### Response:
+{example['output']}"""
+    return {"text": text}
+
+# Formati uygula
+dataset = dataset.map(format_instruction)
+print(dataset[0]["text"])</code></pre>
+
+                <h3>Egitim Argumanları</h3>
+                <pre><code>from transformers import TrainingArguments
+
+training_args = TrainingArguments(
+    # Cikti dizini
+    output_dir="./outputs",
+
+    # Egitim parametreleri
+    num_train_epochs=3,              # Epoch sayisi
+    per_device_train_batch_size=2,   # Batch boyutu (bellek yetersizse 1 yapin)
+    gradient_accumulation_steps=4,    # Efektif batch = 2 * 4 = 8
+
+    # Optimizasyon
+    learning_rate=2e-4,              # Ogrenme orani
+    weight_decay=0.01,               # Agirlik azaltma
+    warmup_ratio=0.03,               # Isinma orani
+
+    # Hassasiyet
+    fp16=True,                       # 16-bit egitim (AMD icin)
+    # bf16=True,                     # Bazi GPU'larda daha iyi olabilir
+
+    # Kaydetme
+    save_strategy="epoch",           # Her epoch sonunda kaydet
+    save_total_limit=3,              # Maksimum kayitli checkpoint
+
+    # Loglama
+    logging_steps=10,                # Her 10 adimda logla
+    logging_dir="./logs",            # Log dizini
+
+    # Diger
+    optim="adamw_torch",             # Optimizer
+    lr_scheduler_type="cosine",      # Ogrenme orani zamanlayici
+
+    # Bellek optimizasyonu
+    gradient_checkpointing=True,     # Bellek tasarrufu (yavas ama az bellek)
+)</code></pre>
+
+                <h3>Trainer Olusturma ve Egitim</h3>
+                <pre><code>from trl import SFTTrainer
+
+# Trainer olustur
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    args=training_args,
+    dataset_text_field="text",
+    max_seq_length=512,              # Maksimum token uzunlugu
+    packing=False,                   # Kisa ornekleri birlestirme
+)
+
+# Egitimi baslat
+print("Egitim basliyor...")
+trainer.train()
+print("Egitim tamamlandi!")</code></pre>
+
+                <div class="alert alert-warning">
+                    <strong>Bellek Hatasi Aliyorsaniz:</strong>
+                    <ul>
+                        <li><code>per_device_train_batch_size</code> degerini 1'e dusurun</li>
+                        <li><code>gradient_checkpointing=True</code> yapin</li>
+                        <li><code>max_seq_length</code> degerini dusurun (ornegin 256)</li>
+                        <li>Daha kucuk bir model secin</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Kaydetme -->
+            <section id="kaydetme">
+                <h2>6. Model Kaydetme</h2>
+
+                <h3>LoRA Adapterleri Kaydetme</h3>
+                <pre><code># Sadece LoRA agirliklarini kaydet (kucuk dosya)
+trainer.model.save_pretrained("./models/my-lora-adapter")
+tokenizer.save_pretrained("./models/my-lora-adapter")
+
+print("LoRA adaptor kaydedildi!")</code></pre>
+
+                <h3>Tam Model Olarak Birlestirme (Opsiyonel)</h3>
+                <pre><code>from peft import PeftModel
+
+# Temel modeli yukle
+base_model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.2-3B",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# LoRA'yi birlestir
+model = PeftModel.from_pretrained(base_model, "./models/my-lora-adapter")
+merged_model = model.merge_and_unload()
+
+# Tam modeli kaydet
+merged_model.save_pretrained("./models/my-merged-model")
+tokenizer.save_pretrained("./models/my-merged-model")
+
+print("Birlestirilmis model kaydedildi!")</code></pre>
+
+                <h3>Hugging Face Hub'a Yukleme (Opsiyonel)</h3>
+                <pre><code># Hub'a yukle
+trainer.model.push_to_hub("kullanici-adi/model-adi")
+tokenizer.push_to_hub("kullanici-adi/model-adi")
+
+print("Model Hub'a yuklendi!")</code></pre>
+            </section>
+
+            <!-- Test -->
+            <section id="test">
+                <h2>7. Test ve Degerlendirme</h2>
+
+                <h3>Fine-Tuned Modeli Yukleme</h3>
+                <pre><code>from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+# Temel model ve tokenizer
+model_id = "meta-llama/Llama-3.2-3B"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# LoRA adaptorunu yukle
+model = PeftModel.from_pretrained(base_model, "./models/my-lora-adapter")
+model.eval()
+
+print("Model yuklendi ve test icin hazir!")</code></pre>
+
+                <h3>Test Fonksiyonu</h3>
+                <pre><code>def generate_response(instruction, input_text=None, max_new_tokens=256):
+    """Fine-tuned modelden yanit al"""
+
+    # Prompt hazirla
+    if input_text:
+        prompt = f"""### Instruction:
+{instruction}
+
+### Input:
+{input_text}
+
+### Response:
+"""
+    else:
+        prompt = f"""### Instruction:
+{instruction}
+
+### Response:
+"""
+
+    # Tokenize
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    # Generate
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=0.7,
+            top_p=0.9,
+            do_sample=True,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    # Decode
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    # Sadece yaniti don
+    response = response.split("### Response:")[-1].strip()
+    return response
+
+# Test
+print(generate_response(
+    instruction="Asagidaki cumleyi Turkce'ye cevir.",
+    input_text="The weather is nice today."
+))</code></pre>
+
+                <h3>Karsilastirmali Test</h3>
+                <pre><code># Test sorulari
+test_cases = [
+    {
+        "instruction": "Asagidaki cumleyi Turkce'ye cevir.",
+        "input": "I love programming."
+    },
+    {
+        "instruction": "5 ile 3'un carpimini hesapla.",
+        "input": None
+    },
+    {
+        "instruction": "Yapay zeka nedir? Kisa acikla.",
+        "input": None
+    }
+]
+
+print("=" * 50)
+print("FINE-TUNED MODEL TEST SONUCLARI")
+print("=" * 50)
+
+for i, test in enumerate(test_cases, 1):
+    print(f"\nTest {i}:")
+    print(f"Instruction: {test['instruction']}")
+    if test['input']:
+        print(f"Input: {test['input']}")
+
+    response = generate_response(test['instruction'], test['input'])
+    print(f"Response: {response}")
+    print("-" * 50)</code></pre>
+            </section>
+
+            <!-- Ipuclari -->
+            <section id="ipuclari">
+                <h2>8. Ipuclari ve Optimizasyonlar</h2>
+
+                <h3>Bellek Optimizasyonu</h3>
+                <div class="card">
+                    <h4>Gradient Checkpointing</h4>
+                    <p>Bellek kullanimini azaltir, egitimi yavaslatir.</p>
+                    <pre><code>training_args = TrainingArguments(
+    ...
+    gradient_checkpointing=True,
+)</code></pre>
+                </div>
+
+                <div class="card">
+                    <h4>Gradient Accumulation</h4>
+                    <p>Kucuk batch'lerle buyuk efektif batch elde edin.</p>
+                    <pre><code>training_args = TrainingArguments(
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=8,  # Efektif batch = 8
+)</code></pre>
+                </div>
+
+                <h3>Egitim Kalitesi Ipuclari</h3>
+                <ul>
+                    <li><strong>Veri Kalitesi:</strong> Az ama kaliteli veri &gt; cok ama dusuk kaliteli veri</li>
+                    <li><strong>Epoch Sayisi:</strong> 3-5 epoch genellikle yeterli, daha fazlasi overfitting yapabilir</li>
+                    <li><strong>Learning Rate:</strong> Cok yuksek = dengesiz egitim, cok dusuk = ogrenme yok</li>
+                    <li><strong>LoRA Rank:</strong> Basit gorevler icin 8, karmasik icin 32+</li>
+                </ul>
+
+                <h3>Hata Ayiklama</h3>
+                <pre><code># Egitim sirasinda GPU bellek kullanimi
+import torch
+
+def print_gpu_memory():
+    if torch.cuda.is_available():
+        allocated = torch.cuda.memory_allocated() / 1024**3
+        reserved = torch.cuda.memory_reserved() / 1024**3
+        print(f"GPU Bellek - Ayrilmis: {allocated:.2f} GB, Rezerve: {reserved:.2f} GB")
+
+# Egitimden once ve sonra cagirin
+print_gpu_memory()</code></pre>
+
+                <h3>Tam Egitim Scripti</h3>
+                <p>Tum adimlari iceren tam script:</p>
+                <pre><code># train.py - Tam Fine-Tuning Script
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from peft import LoraConfig, get_peft_model, TaskType
+from datasets import load_dataset
+from trl import SFTTrainer
+
+# ===== AYARLAR =====
+MODEL_ID = "meta-llama/Llama-3.2-3B"
+DATA_FILE = "data/training_data.json"
+OUTPUT_DIR = "./outputs"
+LORA_OUTPUT = "./models/my-lora-adapter"
+
+# ===== MODEL VE TOKENIZER =====
+print("Model yukleniyor...")
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# ===== LORA YAPILANDIRMASI =====
+print("LoRA yapilandiriliyor...")
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    lora_dropout=0.1,
+    target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
+    bias="none",
+    task_type=TaskType.CAUSAL_LM
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+# ===== VERI SETI =====
+print("Veri seti yukleniyor...")
+dataset = load_dataset("json", data_files=DATA_FILE, split="train")
+
+def format_instruction(example):
+    if example.get("input"):
+        text = f"### Instruction:\n{example['instruction']}\n\n### Input:\n{example['input']}\n\n### Response:\n{example['output']}"
+    else:
+        text = f"### Instruction:\n{example['instruction']}\n\n### Response:\n{example['output']}"
+    return {"text": text}
+
+dataset = dataset.map(format_instruction)
+
+# ===== EGITIM ARGUMALARI =====
+training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    num_train_epochs=3,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=4,
+    learning_rate=2e-4,
+    fp16=True,
+    save_strategy="epoch",
+    logging_steps=10,
+    gradient_checkpointing=True,
+)
+
+# ===== TRAINER =====
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    args=training_args,
+    dataset_text_field="text",
+    max_seq_length=512,
+)
+
+# ===== EGITIM =====
+print("Egitim basliyor...")
+trainer.train()
+
+# ===== KAYDET =====
+print("Model kaydediliyor...")
+trainer.model.save_pretrained(LORA_OUTPUT)
+tokenizer.save_pretrained(LORA_OUTPUT)
+
+print(f"Tamamlandi! Model kaydedildi: {LORA_OUTPUT}")</code></pre>
+            </section>
+
+            <!-- Sonraki Adimlar -->
+            <section>
+                <h2>Sonraki Adimlar</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Strix Halo Kullanicilari</h3>
+                        <p>Buyuk modeller icin ozel optimizasyonlar.</p>
+                        <a href="strix-halo.html" class="btn btn-outline">Strix Halo Rehberi</a>
+                    </div>
+                    <div class="card">
+                        <h3>Daha Iyi Sonuclar Icin</h3>
+                        <p>Linux'ta daha iyi destek ve daha fazla arac secenegi.</p>
+                        <a href="../linux-amd/index.html" class="btn btn-outline">Linux Rehberine Git</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Kaynaklar:
+                <a href="https://huggingface.co/docs/peft" target="_blank">PEFT</a> |
+                <a href="https://huggingface.co/docs/trl" target="_blank">TRL</a> |
+                <a href="https://rocm.docs.amd.com/projects/ai-developer-hub/" target="_blank">AMD AI Developer Hub</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux + AMD Fine-Tuning Araclari</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Linux + AMD Fine-Tuning Araclari</h1>
+            <p>Axolotl, Llama Factory, Torchtune ve Diger Araclar</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="../index.html">Ana Sayfa</a></li>
+                <li><a href="../windows-amd/index.html">Windows + AMD</a></li>
+                <li><a href="index.html" class="active">Linux + AMD</a></li>
+                <li><a href="../windows-nvidia/index.html">Windows + NVIDIA</a></li>
+                <li><a href="../linux-nvidia/index.html">Linux + NVIDIA</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">Ana Sayfa</a> &gt; <a href="index.html">Linux + AMD</a> &gt; Araclar
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <!-- Ozet -->
+            <section>
+                <h2>Arac Karsilastirmasi</h2>
+
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Arac</th>
+                                <th>Kullanim Kolayligi</th>
+                                <th>Esneklik</th>
+                                <th>AMD Destegi</th>
+                                <th>En Iyi Icin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Llama Factory</strong></td>
+                                <td>⭐⭐⭐⭐⭐</td>
+                                <td>⭐⭐⭐⭐</td>
+                                <td><span class="check">✓</span> Tam</td>
+                                <td>Yeni baslayanlar, Web UI</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Axolotl</strong></td>
+                                <td>⭐⭐⭐</td>
+                                <td>⭐⭐⭐⭐⭐</td>
+                                <td><span class="check">✓</span> Tam</td>
+                                <td>Ileri duzey, YAML config</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Torchtune</strong></td>
+                                <td>⭐⭐⭐⭐</td>
+                                <td>⭐⭐⭐⭐</td>
+                                <td><span class="check">✓</span> Tam</td>
+                                <td>PyTorch kullanicilari</td>
+                            </tr>
+                            <tr>
+                                <td><strong>PyTorch + PEFT</strong></td>
+                                <td>⭐⭐⭐</td>
+                                <td>⭐⭐⭐⭐⭐</td>
+                                <td><span class="check">✓</span> Tam</td>
+                                <td>Tam kontrol isteyenler</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Unsloth (Fork)</strong></td>
+                                <td>⭐⭐⭐⭐</td>
+                                <td>⭐⭐⭐</td>
+                                <td><span class="partial">⚠️</span> Kismi</td>
+                                <td>Hiz odakli (sinirli)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Llama Factory -->
+            <section>
+                <h2>1. Llama Factory (Onerilen)</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">En Kolay</span>
+                        <span class="tag tag-amd">AMD Tam Destek</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        Llama Factory, 100+ LLM modelini fine-tune edebilen birlesik bir cercevedir.
+                        Web UI ve komut satiri destegi ile kod yazmadan fine-tuning yapabilirsiniz.
+                    </p>
+
+                    <h3>Ozellikler</h3>
+                    <ul>
+                        <li>100+ model destegi (Llama, Mistral, Qwen, Phi, Yi, Gemma vb.)</li>
+                        <li>Web UI (LlamaBoard) - kod yazmadan kullanim</li>
+                        <li>LoRA, QLoRA, tam fine-tuning destegi</li>
+                        <li>DeepSpeed ve FSDP ile coklu GPU</li>
+                        <li>RLHF destegi (PPO, DPO, KTO, ORPO)</li>
+                    </ul>
+
+                    <h3>Kurulum</h3>
+                    <pre><code># Klonla
+git clone --depth 1 https://github.com/hiyouga/LLaMA-Factory.git
+cd LLaMA-Factory
+
+# Kur
+pip install -e ".[torch,metrics]"
+
+# ROCm icin ek gereksinimler
+pip install deepspeed</code></pre>
+
+                    <h3>Web UI ile Kullanim</h3>
+                    <pre><code># Web arayuzunu baslat
+llamafactory-cli webui
+
+# Tarayicinizda http://localhost:7860 adresine gidin</code></pre>
+
+                    <h3>Komut Satiri ile Kullanim</h3>
+                    <pre><code># Ornek LoRA egitimi
+llamafactory-cli train examples/train_lora/llama3_lora_sft.yaml
+
+# Veya ozel yapilandirma
+llamafactory-cli train \
+    --model_name_or_path meta-llama/Llama-3.2-3B \
+    --dataset alpaca_en \
+    --template llama3 \
+    --finetuning_type lora \
+    --output_dir ./outputs/llama3-lora \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 4 \
+    --lr_scheduler_type cosine \
+    --learning_rate 5e-5 \
+    --num_train_epochs 3</code></pre>
+
+                    <p>
+                        <a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank" class="btn btn-outline">GitHub</a>
+                        <a href="https://rocm.docs.amd.com/projects/ai-developer-hub/en/latest/notebooks/fine_tune/llama_factory_llama3.html" target="_blank" class="btn btn-outline">AMD Rehberi</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Axolotl -->
+            <section>
+                <h2>2. Axolotl</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">Esnek</span>
+                        <span class="tag tag-amd">AMD Destekli</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        Axolotl, YAML tabanli yapilandirma ile esnek fine-tuning saglayan bir aractir.
+                        Topluluk tarafindan cok sevilir ve yeni teknikler hizla eklenir.
+                    </p>
+
+                    <h3>AMD Icin Kurulum</h3>
+                    <p>
+                        AMD GPU'lar icin ozel fork veya Docker kullanmaniz onerilir.
+                    </p>
+
+                    <h4>Docker ile (Onerilen)</h4>
+                    <pre><code># AMD ROCm blogs repository'den Dockerfile kullanin
+git clone https://github.com/ROCm/rocm-blogs.git
+cd rocm-blogs/blogs/artificial-intelligence/axolotl/src
+
+# Docker imajini derle (uzun surebilir)
+docker build -t axolotl-rocm .
+
+# Calistir
+docker run -it --rm \
+    --device=/dev/kfd \
+    --device=/dev/dri \
+    --group-add=video \
+    --ipc=host \
+    --shm-size 16G \
+    -v $(pwd):/workspace \
+    axolotl-rocm</code></pre>
+
+                    <h4>AMD Fork ile</h4>
+                    <pre><code># AMD optimize fork
+git clone https://github.com/AI-DarwinLabs/axolotl.git
+cd axolotl
+git checkout amd-support
+
+# Bagimliliklari kur
+pip install -e .</code></pre>
+
+                    <h3>Kullanim</h3>
+                    <pre><code># Ornek yapilandirma (examples/llama-3/lora.yaml)
+accelerate launch -m axolotl.cli.train examples/llama-3/lora.yaml</code></pre>
+
+                    <h3>Ornek YAML Yapilandirmasi</h3>
+                    <pre><code># my_config.yaml
+base_model: meta-llama/Llama-3.2-3B
+model_type: LlamaForCausalLM
+tokenizer_type: AutoTokenizer
+
+load_in_8bit: false
+load_in_4bit: true  # QLoRA icin
+
+datasets:
+  - path: tatsu-lab/alpaca
+    type: alpaca
+
+adapter: lora
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - v_proj
+  - k_proj
+  - o_proj
+
+sequence_len: 2048
+sample_packing: true
+
+micro_batch_size: 2
+gradient_accumulation_steps: 4
+num_epochs: 3
+learning_rate: 2e-4
+lr_scheduler: cosine
+
+output_dir: ./outputs/llama3-lora
+
+bf16: true
+tf32: true
+gradient_checkpointing: true</code></pre>
+
+                    <p>
+                        <a href="https://github.com/axolotl-ai-cloud/axolotl" target="_blank" class="btn btn-outline">GitHub</a>
+                        <a href="https://rocm.blogs.amd.com/artificial-intelligence/axolotl/README.html" target="_blank" class="btn btn-outline">AMD Blog</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Torchtune -->
+            <section>
+                <h2>3. Torchtune</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">Resmi</span>
+                        <span class="tag tag-amd">AMD Destekli</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        Torchtune, Meta (PyTorch) tarafindan gelistirilen resmi fine-tuning kutuphanesidir.
+                        Saf PyTorch uzerinde calisir, minimum bagimliliklarla temiz bir deneyim sunar.
+                    </p>
+
+                    <h3>Kurulum</h3>
+                    <pre><code>pip install torchtune</code></pre>
+
+                    <h3>Kullanim</h3>
+                    <pre><code># Mevcut tarifleri listele
+tune ls
+
+# Yapilandirma sablonunu kopyala
+tune cp llama3_2/3B_lora_single_device ./my_config.yaml
+
+# Yapilandirmayi duzenle (veri seti, parametreler vb.)
+nano my_config.yaml
+
+# Egitimi baslat
+tune run lora_finetune_single_device --config ./my_config.yaml</code></pre>
+
+                    <h3>Desteklenen Tarifler</h3>
+                    <ul>
+                        <li><code>lora_finetune_single_device</code> - Tek GPU'da LoRA</li>
+                        <li><code>lora_finetune_distributed</code> - Coklu GPU'da LoRA</li>
+                        <li><code>full_finetune_single_device</code> - Tek GPU'da tam fine-tuning</li>
+                        <li><code>full_finetune_distributed</code> - Coklu GPU'da tam fine-tuning</li>
+                        <li><code>quantized_training</code> - Quantized egitim</li>
+                    </ul>
+
+                    <p>
+                        <a href="https://github.com/meta-pytorch/torchtune" target="_blank" class="btn btn-outline">GitHub</a>
+                        <a href="https://rocm.blogs.amd.com/artificial-intelligence/torchtune/README.html" target="_blank" class="btn btn-outline">AMD Blog</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- DeepSpeed -->
+            <section>
+                <h2>4. DeepSpeed</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">Performans</span>
+                        <span class="tag tag-amd">AMD Destekli</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        DeepSpeed, Microsoft tarafindan gelistirilen dagitik egitim ve
+                        bellek optimizasyonu kutuphanesidir. Buyuk modelleri sinirli bellekle
+                        egitmenize olanak tanir.
+                    </p>
+
+                    <h3>Kurulum</h3>
+                    <pre><code># ROCm icin DeepSpeed
+DS_BUILD_CPU_ADAM=1 pip install deepspeed</code></pre>
+
+                    <h3>ZeRO Optimizasyonu</h3>
+                    <ul>
+                        <li><strong>ZeRO-1:</strong> Optimizer state'leri dagitilir</li>
+                        <li><strong>ZeRO-2:</strong> Gradient'ler de dagitilir</li>
+                        <li><strong>ZeRO-3:</strong> Model parametreleri de dagitilir (en fazla bellek tasarrufu)</li>
+                    </ul>
+
+                    <h3>Ornek Yapilandirma</h3>
+                    <pre><code># ds_config.json
+{
+    "bf16": {"enabled": true},
+    "zero_optimization": {
+        "stage": 2,
+        "offload_optimizer": {"device": "cpu"},
+        "allgather_partitions": true,
+        "reduce_scatter": true,
+        "overlap_comm": true
+    },
+    "gradient_accumulation_steps": 4,
+    "train_micro_batch_size_per_gpu": 2
+}</code></pre>
+
+                    <h3>Llama Factory ile Kullanim</h3>
+                    <pre><code># deepspeed_config dosyasini belirt
+llamafactory-cli train \
+    --deepspeed ds_config.json \
+    --model_name_or_path meta-llama/Llama-3.2-3B \
+    ...</code></pre>
+
+                    <p>
+                        <a href="https://www.deepspeed.ai/" target="_blank" class="btn btn-outline">DeepSpeed Docs</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- vLLM -->
+            <section>
+                <h2>5. vLLM (Inference Icin)</h2>
+
+                <div class="card">
+                    <p>
+                        <span class="tag tag-stable">Inference</span>
+                        <span class="tag tag-amd">AMD Destekli</span>
+                    </p>
+
+                    <h3>Nedir?</h3>
+                    <p>
+                        vLLM, yuksek performansli LLM inference ve serving kutuphanesidir.
+                        Fine-tuning icin degil, egitilmis modelleri calistirmak icin kullanilir.
+                    </p>
+
+                    <h3>AMD ROCm ile Kurulum</h3>
+                    <pre><code># Docker ile (onerilen)
+docker pull rocm/vllm:rocm6.2_vllm_0.6.0
+
+docker run -it --rm \
+    --device=/dev/kfd \
+    --device=/dev/dri \
+    --group-add=video \
+    --ipc=host \
+    --shm-size 16G \
+    -p 8000:8000 \
+    rocm/vllm:rocm6.2_vllm_0.6.0</code></pre>
+
+                    <h3>Model Sunumu</h3>
+                    <pre><code># Modeli sun
+vllm serve meta-llama/Llama-3.2-3B --port 8000
+
+# API'ye istek gonder
+curl http://localhost:8000/v1/completions \
+    -H "Content-Type: application/json" \
+    -d '{"model": "meta-llama/Llama-3.2-3B", "prompt": "Merhaba,", "max_tokens": 50}'</code></pre>
+
+                    <p>
+                        <a href="https://docs.vllm.ai/en/latest/getting_started/amd-installation.html" target="_blank" class="btn btn-outline">AMD Kurulum</a>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Oneri -->
+            <section>
+                <h2>Hangi Araci Secmeliyim?</h2>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Yeni Baslayanlar</h3>
+                        <p><strong>Llama Factory</strong> kullanin.</p>
+                        <ul>
+                            <li>Web UI ile kod yazmadan baslayin</li>
+                            <li>Iyi dokumantasyon</li>
+                            <li>Hizli kurulum</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>Deneyimli Kullanicilar</h3>
+                        <p><strong>Axolotl</strong> kullanin.</p>
+                        <ul>
+                            <li>YAML ile tam kontrol</li>
+                            <li>En son teknikler</li>
+                            <li>Aktif topluluk</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>PyTorch Severlere</h3>
+                        <p><strong>Torchtune</strong> kullanin.</p>
+                        <ul>
+                            <li>Saf PyTorch</li>
+                            <li>Meta resmi araci</li>
+                            <li>Temiz kod yapisi</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>Buyuk Modeller</h3>
+                        <p><strong>DeepSpeed</strong> ekleyin.</p>
+                        <ul>
+                            <li>ZeRO optimizasyonu</li>
+                            <li>Coklu GPU dagitimi</li>
+                            <li>Bellek tasarrufu</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Kaynaklar:
+                <a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank">Llama Factory</a> |
+                <a href="https://github.com/axolotl-ai-cloud/axolotl" target="_blank">Axolotl</a> |
+                <a href="https://github.com/meta-pytorch/torchtune" target="_blank">Torchtune</a> |
+                <a href="https://www.deepspeed.ai/" target="_blank">DeepSpeed</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

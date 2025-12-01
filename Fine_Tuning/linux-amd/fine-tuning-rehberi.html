@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux + AMD Adim Adim Fine-Tuning Rehberi</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Adim Adim Fine-Tuning Rehberi</h1>
+            <p>Linux + AMD ile Llama Factory ve PyTorch Kullanarak LLM Fine-Tuning</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="../index.html">Ana Sayfa</a></li>
+                <li><a href="../windows-amd/index.html">Windows + AMD</a></li>
+                <li><a href="index.html" class="active">Linux + AMD</a></li>
+                <li><a href="../windows-nvidia/index.html">Windows + NVIDIA</a></li>
+                <li><a href="../linux-nvidia/index.html">Linux + NVIDIA</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">Ana Sayfa</a> &gt; <a href="index.html">Linux + AMD</a> &gt; Fine-Tuning Rehberi
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <!-- Giris -->
+            <div class="alert alert-info">
+                <strong>Onkosul:</strong> Bu rehberi takip etmeden once
+                <a href="kurulum.html">Kurulum Rehberi</a>'ni tamamlayin.
+            </div>
+
+            <!-- Icindekiler -->
+            <div class="toc">
+                <h3>Bu Rehberde</h3>
+                <ul>
+                    <li><a href="#yontem1">Yontem 1: Llama Factory ile (En Kolay)</a></li>
+                    <li><a href="#yontem2">Yontem 2: PyTorch + PEFT ile (Tam Kontrol)</a></li>
+                    <li><a href="#yontem3">Yontem 3: Axolotl ile (YAML Tabanli)</a></li>
+                    <li><a href="#veri-seti">Veri Seti Hazirlama</a></li>
+                    <li><a href="#optimizasyon">Performans Optimizasyonu</a></li>
+                </ul>
+            </div>
+
+            <!-- Yontem 1: Llama Factory -->
+            <section id="yontem1">
+                <h2>Yontem 1: Llama Factory ile Fine-Tuning (En Kolay)</h2>
+
+                <p>
+                    Llama Factory, Web UI veya komut satiri ile kod yazmadan fine-tuning yapmanizi saglar.
+                    Yeni baslayanlar icin en iyi secenektir.
+                </p>
+
+                <div class="steps">
+                    <div class="step">
+                        <h3>Llama Factory'yi Kurun</h3>
+                        <pre><code># Docker icinde veya sisteminizde
+git clone --depth 1 https://github.com/hiyouga/LLaMA-Factory.git
+cd LLaMA-Factory
+pip install -e ".[torch,metrics]"</code></pre>
+                    </div>
+
+                    <div class="step">
+                        <h3>Web UI'yi Baslatin</h3>
+                        <pre><code>llamafactory-cli webui</code></pre>
+                        <p>Tarayicinizda <code>http://localhost:7860</code> adresine gidin.</p>
+                    </div>
+
+                    <div class="step">
+                        <h3>Web UI'da Ayarlari Yapin</h3>
+                        <ul>
+                            <li><strong>Model:</strong> "meta-llama/Llama-3.2-3B" secin</li>
+                            <li><strong>Dataset:</strong> "alpaca_en" veya kendi veri setiniz</li>
+                            <li><strong>Finetuning Type:</strong> "lora" secin</li>
+                            <li><strong>Output Dir:</strong> "./outputs/my-model"</li>
+                        </ul>
+                    </div>
+
+                    <div class="step">
+                        <h3>Egitimi Baslatin</h3>
+                        <p>"Start" butonuna basin ve egitimi izleyin.</p>
+                    </div>
+                </div>
+
+                <h3>Komut Satiri ile Kullanim</h3>
+                <pre><code># LoRA ile Llama 3.2 3B egitimi
+llamafactory-cli train \
+    --stage sft \
+    --model_name_or_path meta-llama/Llama-3.2-3B \
+    --dataset alpaca_en \
+    --template llama3 \
+    --finetuning_type lora \
+    --lora_rank 16 \
+    --lora_alpha 32 \
+    --lora_target q_proj,v_proj,k_proj,o_proj \
+    --output_dir ./outputs/llama3-lora \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 4 \
+    --lr_scheduler_type cosine \
+    --learning_rate 2e-4 \
+    --num_train_epochs 3 \
+    --bf16 true \
+    --logging_steps 10 \
+    --save_steps 500</code></pre>
+
+                <h3>QLoRA ile (Daha Az Bellek)</h3>
+                <pre><code>llamafactory-cli train \
+    --stage sft \
+    --model_name_or_path meta-llama/Llama-3.2-3B \
+    --dataset alpaca_en \
+    --template llama3 \
+    --finetuning_type lora \
+    --quantization_bit 4 \
+    --lora_rank 16 \
+    --lora_alpha 32 \
+    --output_dir ./outputs/llama3-qlora \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 4 \
+    --learning_rate 2e-4 \
+    --num_train_epochs 3 \
+    --bf16 true</code></pre>
+
+                <h3>Modeli Test Etme</h3>
+                <pre><code># Interaktif chat
+llamafactory-cli chat \
+    --model_name_or_path meta-llama/Llama-3.2-3B \
+    --adapter_name_or_path ./outputs/llama3-lora \
+    --template llama3</code></pre>
+            </section>
+
+            <!-- Yontem 2: PyTorch + PEFT -->
+            <section id="yontem2">
+                <h2>Yontem 2: PyTorch + PEFT ile Fine-Tuning</h2>
+
+                <p>
+                    Tam kontrol istiyorsaniz, dogrudan PyTorch ve PEFT kullanabilirsiniz.
+                </p>
+
+                <h3>Tam Egitim Scripti</h3>
+                <pre><code># train_lora.py
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    BitsAndBytesConfig
+)
+from peft import LoraConfig, get_peft_model, TaskType
+from datasets import load_dataset
+from trl import SFTTrainer
+
+# ===== AYARLAR =====
+MODEL_ID = "meta-llama/Llama-3.2-3B"
+OUTPUT_DIR = "./outputs/llama3-lora"
+USE_QLORA = False  # True yapin QLoRA icin
+
+# ===== MODEL YUKLEME =====
+print("Model yukleniyor...")
+
+if USE_QLORA:
+    # QLoRA icin 4-bit quantization
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_use_double_quant=True
+    )
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        quantization_config=bnb_config,
+        device_map="auto",
+        trust_remote_code=True
+    )
+else:
+    # Standart LoRA
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+        trust_remote_code=True
+    )
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+# ===== LORA YAPILANDIRMASI =====
+print("LoRA yapilandiriliyor...")
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type=TaskType.CAUSAL_LM
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+# ===== VERI SETI =====
+print("Veri seti yukleniyor...")
+dataset = load_dataset("tatsu-lab/alpaca", split="train[:5000]")  # Ilk 5000 ornek
+
+def format_instruction(example):
+    if example.get("input"):
+        text = f"""### Instruction:
+{example['instruction']}
+
+### Input:
+{example['input']}
+
+### Response:
+{example['output']}{tokenizer.eos_token}"""
+    else:
+        text = f"""### Instruction:
+{example['instruction']}
+
+### Response:
+{example['output']}{tokenizer.eos_token}"""
+    return {"text": text}
+
+dataset = dataset.map(format_instruction)
+
+# ===== EGITIM ARGUMALARI =====
+training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    num_train_epochs=3,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=4,
+    learning_rate=2e-4,
+    weight_decay=0.01,
+    warmup_ratio=0.03,
+    lr_scheduler_type="cosine",
+    bf16=True,
+    logging_steps=10,
+    save_strategy="steps",
+    save_steps=500,
+    save_total_limit=3,
+    gradient_checkpointing=True,
+    optim="adamw_torch",
+    report_to="none"
+)
+
+# ===== TRAINER =====
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    args=training_args,
+    dataset_text_field="text",
+    max_seq_length=512,
+    packing=False
+)
+
+# ===== EGITIM =====
+print("Egitim basliyor...")
+trainer.train()
+
+# ===== KAYDET =====
+print("Model kaydediliyor...")
+trainer.model.save_pretrained(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+
+print(f"Tamamlandi! Model: {OUTPUT_DIR}")</code></pre>
+
+                <p>Calistirmak icin:</p>
+                <pre><code>python train_lora.py</code></pre>
+
+                <h3>Modeli Test Etme</h3>
+                <pre><code># test_model.py
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+MODEL_ID = "meta-llama/Llama-3.2-3B"
+ADAPTER_PATH = "./outputs/llama3-lora"
+
+# Model ve adapter yukle
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+base_model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    torch_dtype=torch.bfloat16,
+    device_map="auto"
+)
+model = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
+model.eval()
+
+def generate(instruction, input_text=None):
+    if input_text:
+        prompt = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n"
+    else:
+        prompt = f"### Instruction:\n{instruction}\n\n### Response:\n"
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=256,
+            temperature=0.7,
+            top_p=0.9,
+            do_sample=True
+        )
+
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return response.split("### Response:")[-1].strip()
+
+# Test
+print(generate("Python nedir? Kisa acikla."))</code></pre>
+            </section>
+
+            <!-- Yontem 3: Axolotl -->
+            <section id="yontem3">
+                <h2>Yontem 3: Axolotl ile Fine-Tuning</h2>
+
+                <p>
+                    YAML tabanli yapilandirma ile esnek fine-tuning.
+                </p>
+
+                <h3>Yapilandirma Dosyasi</h3>
+                <pre><code># llama3_lora.yaml
+base_model: meta-llama/Llama-3.2-3B
+model_type: LlamaForCausalLM
+tokenizer_type: AutoTokenizer
+
+load_in_8bit: false
+load_in_4bit: false
+
+datasets:
+  - path: tatsu-lab/alpaca
+    type: alpaca
+    train_on_split: train
+
+dataset_prepared_path: ./prepared_data
+output_dir: ./outputs/axolotl-llama3
+
+adapter: lora
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules:
+  - q_proj
+  - v_proj
+  - k_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+lora_target_linear: false
+
+sequence_len: 2048
+sample_packing: true
+pad_to_sequence_len: true
+
+micro_batch_size: 2
+gradient_accumulation_steps: 4
+num_epochs: 3
+learning_rate: 2e-4
+lr_scheduler: cosine
+warmup_ratio: 0.03
+
+optimizer: adamw_torch
+weight_decay: 0.01
+
+bf16: true
+tf32: true
+gradient_checkpointing: true
+
+logging_steps: 10
+save_strategy: steps
+save_steps: 500
+
+eval_steps: 500
+eval_sample_packing: false</code></pre>
+
+                <h3>Egitimi Baslatin</h3>
+                <pre><code># Tek GPU
+accelerate launch -m axolotl.cli.train llama3_lora.yaml
+
+# Coklu GPU
+accelerate launch --multi_gpu --num_processes 2 -m axolotl.cli.train llama3_lora.yaml</code></pre>
+            </section>
+
+            <!-- Veri Seti -->
+            <section id="veri-seti">
+                <h2>Veri Seti Hazirlama</h2>
+
+                <h3>Desteklenen Formatlar</h3>
+
+                <h4>1. Alpaca Formati</h4>
+                <pre><code>[
+    {
+        "instruction": "Gorev aciklamasi",
+        "input": "Opsiyonel giris",
+        "output": "Beklenen cikti"
+    }
+]</code></pre>
+
+                <h4>2. ShareGPT Formati</h4>
+                <pre><code>[
+    {
+        "conversations": [
+            {"from": "human", "value": "Kullanici mesaji"},
+            {"from": "gpt", "value": "Asistan yaniti"}
+        ]
+    }
+]</code></pre>
+
+                <h4>3. OpenAI Chat Formati</h4>
+                <pre><code>[
+    {
+        "messages": [
+            {"role": "system", "content": "Sistem mesaji"},
+            {"role": "user", "content": "Kullanici mesaji"},
+            {"role": "assistant", "content": "Asistan yaniti"}
+        ]
+    }
+]</code></pre>
+
+                <h3>Ornek Turkce Veri Seti</h3>
+                <pre><code># turkce_veri.json
+[
+    {
+        "instruction": "Verilen cumleyi Ingilizce'ye cevir.",
+        "input": "Bugun hava cok guzel.",
+        "output": "The weather is very nice today."
+    },
+    {
+        "instruction": "Asagidaki soruyu yanitla.",
+        "input": "Turkiye'nin baskenti neresidir?",
+        "output": "Turkiye'nin baskenti Ankara'dir."
+    },
+    {
+        "instruction": "Metni ozetle.",
+        "input": "Yapay zeka, bilgisayarlarin insan zekasini taklit etmesini saglayan bir teknolojidir. Makine ogrenimi, derin ogrenme ve dogal dil isleme gibi alt alanlari vardir. Gunumuzde saglik, finans, ulasim gibi bircok alanda kullanilmaktadir.",
+        "output": "Yapay zeka, bilgisayarlarin insan zekasini taklit ettigini bir teknolojidir ve saglik, finans gibi bircok alanda kullanilir."
+    }
+]</code></pre>
+
+                <h3>Llama Factory'de Ozel Veri Seti Kullanimi</h3>
+                <pre><code># data/dataset_info.json dosyasina ekleyin:
+{
+    "turkce_veri": {
+        "file_name": "turkce_veri.json",
+        "formatting": "alpaca"
+    }
+}
+
+# Egitimde kullanin:
+llamafactory-cli train \
+    --dataset turkce_veri \
+    ...</code></pre>
+            </section>
+
+            <!-- Optimizasyon -->
+            <section id="optimizasyon">
+                <h2>Performans Optimizasyonu</h2>
+
+                <h3>Bellek Tasarrufu Ipuclari</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Teknik</th>
+                            <th>Bellek Tasarrufu</th>
+                            <th>Hiz Etkisi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Gradient Checkpointing</td>
+                            <td>%30-50</td>
+                            <td>%10-20 yavaslatir</td>
+                        </tr>
+                        <tr>
+                            <td>QLoRA (4-bit)</td>
+                            <td>%60-70</td>
+                            <td>Hafif yavaslatir</td>
+                        </tr>
+                        <tr>
+                            <td>Batch Size Dusurme</td>
+                            <td>Dogrusal</td>
+                            <td>Throughput duser</td>
+                        </tr>
+                        <tr>
+                            <td>Sequence Length Dusurme</td>
+                            <td>Kuadratik</td>
+                            <td>Model kapasitesi duser</td>
+                        </tr>
+                        <tr>
+                            <td>DeepSpeed ZeRO-2/3</td>
+                            <td>%50-80</td>
+                            <td>Iletisim yukunde artis</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Coklu GPU Kullanimi</h3>
+                <pre><code># 2 GPU ile Llama Factory
+CUDA_VISIBLE_DEVICES=0,1 llamafactory-cli train \
+    --deepspeed ds_config.json \
+    ...
+
+# ds_config.json
+{
+    "bf16": {"enabled": true},
+    "zero_optimization": {
+        "stage": 2,
+        "offload_optimizer": {"device": "none"},
+        "allgather_partitions": true,
+        "reduce_scatter": true
+    },
+    "gradient_accumulation_steps": "auto",
+    "train_micro_batch_size_per_gpu": "auto"
+}</code></pre>
+
+                <h3>GPU Izleme</h3>
+                <pre><code># Anlık GPU durumu
+rocm-smi
+
+# Surekli izleme (her 1 saniye)
+watch -n 1 rocm-smi
+
+# Detayli bilgi
+rocm-smi --showmeminfo vram</code></pre>
+            </section>
+
+            <!-- Sonraki Adimlar -->
+            <section>
+                <h2>Sonraki Adimlar</h2>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Modeli Dagit</h3>
+                        <p>vLLM ile yuksek performansli inference sunucusu kurun.</p>
+                        <pre><code>vllm serve ./outputs/merged-model</code></pre>
+                    </div>
+
+                    <div class="card">
+                        <h3>GGUF'a Donustur</h3>
+                        <p>llama.cpp ile kullanmak icin GGUF formatina donusturun.</p>
+                        <pre><code># llama.cpp/convert.py kullanin</code></pre>
+                    </div>
+
+                    <div class="card">
+                        <h3>Hub'a Yukle</h3>
+                        <p>Modelinizi Hugging Face Hub'a yukleyin.</p>
+                        <pre><code>huggingface-cli upload user/model ./outputs</code></pre>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                Kaynaklar:
+                <a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank">Llama Factory</a> |
+                <a href="https://huggingface.co/docs/peft" target="_blank">PEFT</a> |
+                <a href="https://rocm.docs.amd.com/projects/ai-developer-hub/" target="_blank">AMD AI Developer Hub</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
