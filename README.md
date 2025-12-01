@@ -2,10 +2,6 @@
 
 Gelişmiş özelliklerle donatılmış, Türkçe arayüzlü masaüstü not alma uygulaması.
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
-![PyQt5](https://img.shields.io/badge/PyQt5-5.15+-green.svg)
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)
-
 ## Özellikler
 
 ### Temel Özellikler
@@ -16,24 +12,26 @@ Gelişmiş özelliklerle donatılmış, Türkçe arayüzlü masaüstü not alma 
 - Gelişmiş arama ve filtreleme
 
 ### Gelişmiş Özellikler
-- **Git Takip**: GitHub repolarını takip edin, yeni commit bildirimleri alın
+- **Git Takip**: GitHub/GitLab repolarını takip edin, yeni commit bildirimleri alın
 - **Sürüm Geçmişi**: Notlarınızın geçmiş versiyonlarını görüntüleyin
-- **Şifreli Notlar**: AES şifreleme ile notlarınızı koruyun
+- **Şifreli Notlar**: AES-256 şifreleme ile notlarınızı koruyun
 - **Hatırlatıcılar**: Notlara hatırlatıcı ekleyin
 - **Takvim Görünümü**: Notlarınızı takvimde görüntüleyin
-- **Markdown Desteği**: Markdown formatında yazın
-- **Kod Bloğu**: Sözdizimi vurgulama ile kod blokları
+- **Markdown Desteği**: Markdown formatında yazın ve önizleyin
+- **Kod Bloğu**: Sözdizimi vurgulama ile kod blokları ekleyin
 - **Web Clipper**: Web sayfalarından içerik kaydedin
 - **PDF Aktarımı**: Notları PDF olarak dışa aktarın
-- **Çeviri**: Notları farklı dillere çevirin
+- **Çeviri**: Notları farklı dillere çevirin (sağ tık menüsü)
 - **Bulut Senkronizasyon**: Google Drive ve Dropbox desteği
 - **Şablonlar**: Hazır not şablonları kullanın
+- **Notlar Arası Bağlantı**: [[Not Adı]] formatıyla notlar arası link
 
-## Kurulum
+## Gereksinimler
 
-### Gereksinimler
 - Python 3.11 veya üzeri
 - Windows işletim sistemi
+
+## Kurulum
 
 ### Bağımlılıkları Yükleme
 
@@ -82,151 +80,67 @@ pip install pyinstaller
 
 **2. Tek Dosya EXE Oluşturma:**
 ```bash
-pyinstaller --onefile --windowed --name "NotDefteriPro" --icon=icon.ico ana_uygulama.py
+pyinstaller --onefile --windowed --name "NotDefteriPro" ana_uygulama.py
 ```
 
 **3. Klasör Yapısıyla EXE Oluşturma (Daha hızlı başlatma):**
 ```bash
-pyinstaller --windowed --name "NotDefteriPro" --icon=icon.ico ana_uygulama.py
+pyinstaller --windowed --name "NotDefteriPro" ana_uygulama.py
 ```
 
-**4. Spec Dosyası ile Detaylı Yapılandırma:**
-
-`NotDefteriPro.spec` dosyası oluşturun:
-```python
-# -*- mode: python ; coding: utf-8 -*-
-
-block_cipher = None
-
-a = Analysis(
-    ['ana_uygulama.py'],
-    pathex=[],
-    binaries=[],
-    datas=[
-        ('moduller', 'moduller'),
-    ],
-    hiddenimports=[
-        'PyQt5.QtWidgets',
-        'PyQt5.QtCore',
-        'PyQt5.QtGui',
-        'cryptography',
-        'markdown',
-        'Pygments',
-        'bs4',
-        'deep_translator',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='NotDefteriPro',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon='icon.ico',
-)
-```
-
-Ardından çalıştırın:
+**4. Modüller dahil detaylı komut:**
 ```bash
-pyinstaller NotDefteriPro.spec
+pyinstaller --onefile --windowed --name "NotDefteriPro" ^
+  --add-data "moduller;moduller" ^
+  --hidden-import "PyQt5.QtWidgets" ^
+  --hidden-import "PyQt5.QtCore" ^
+  --hidden-import "PyQt5.QtGui" ^
+  --hidden-import "cryptography" ^
+  --hidden-import "markdown" ^
+  --hidden-import "Pygments" ^
+  --hidden-import "bs4" ^
+  --hidden-import "deep_translator" ^
+  ana_uygulama.py
 ```
 
-### Cx_Freeze ile (Alternatif)
-
-**1. Cx_Freeze Kurulumu:**
-```bash
-pip install cx_Freeze
-```
-
-**2. setup.py Dosyası Oluşturun:**
-```python
-from cx_Freeze import setup, Executable
-import sys
-
-build_exe_options = {
-    "packages": [
-        "PyQt5",
-        "sqlite3",
-        "json",
-        "os",
-        "sys",
-        "datetime",
-    ],
-    "includes": [
-        "moduller",
-        "bilesenler",
-        "veritabani",
-        "stiller",
-    ],
-    "excludes": ["tkinter"],
-    "include_files": [
-        ("moduller", "moduller"),
-    ],
-}
-
-base = "Win32GUI" if sys.platform == "win32" else None
-
-setup(
-    name="NotDefteriPro",
-    version="1.0.0",
-    description="Gelişmiş Not Defteri Uygulaması",
-    options={"build_exe": build_exe_options},
-    executables=[
-        Executable(
-            "ana_uygulama.py",
-            base=base,
-            target_name="NotDefteriPro.exe",
-            icon="icon.ico",
-        )
-    ],
-)
-```
-
-**3. EXE Oluşturma:**
-```bash
-python setup.py build
-```
+**Not:** Windows'ta `^` ile satır devam eder. Linux/Mac için `\` kullanın.
 
 ### Önemli Notlar
 
 - EXE oluştururken tüm bağımlılıkların yüklü olduğundan emin olun
-- `--onefile` seçeneği daha yavaş başlatma süresi verir ama tek dosya oluşturur
-- `--windowed` seçeneği konsol penceresini gizler
-- İkon dosyası (icon.ico) yoksa `--icon` parametresini kaldırın
+- `--onefile` tek dosya oluşturur ama başlatma süresi daha uzundur
+- `--windowed` konsol penceresini gizler
 - Oluşturulan EXE `dist` klasöründe bulunur
+- Veritabanı (`notlar.db`) EXE ile aynı klasörde oluşturulur
 
-## Kullanım Kılavuzu
+## Kullanım
 
-### Temel Kullanım
+### Arayüz Bölümleri
 
-1. **Yeni Not Oluşturma**: Araç çubuğundan "Yeni Not" butonuna tıklayın
-2. **Not Kaydetme**: "Kaydet" butonuna tıklayın veya Ctrl+S kullanın
-3. **Kategori Ekleme**: Sol paneldeki "+" butonuyla yeni kategori ekleyin
-4. **Etiket Ekleme**: Not düzenleyicisinde "Etiket ekle..." alanını kullanın
+#### Üst Çubuk (Sekmeler)
+- **📝 Notlar**: Ana not görünümüne geç
+- **🔄 Git Takip**: GitHub/GitLab repo takip paneli
+- **📅 Takvim**: Takvim görünümünü aç
+- **📊 İstatistikler**: Not istatistiklerini görüntüle
+- **Not Seç Dropdown**: Hızlı not seçimi
+- **Arama Kutusu**: Not içeriğinde arama
+- **Gelişmiş Arama**: Detaylı arama seçenekleri
+
+#### Sol Panel (Kenar Çubuğu)
+- **Filtreler**: Tüm notlar, favoriler, şifreli notlar, çöp kutusu
+- **Kategoriler**: Not kategorileri (+ ile yeni ekle)
+- **Etiketler**: Tüm etiketler listesi (+ ile yeni ekle)
+
+#### Orta Panel (Not Listesi)
+- Not kartları tarihe göre sıralı
+- Favori yıldızı ile hızlı işaretleme
+- Görünüm menüsünden gizlenebilir (Ctrl+L)
+
+#### Sağ Panel (Düzenleyici)
+- Not başlığı girişi
+- Kategori seçimi ve etiket ekleme
+- Zengin metin düzenleyici (formatlama araç çubuğu)
+- Kaydet, Sürüm Geçmişi, Sil butonları
 
 ### Klavye Kısayolları
 
@@ -239,86 +153,70 @@ python setup.py build
 | Ctrl+B | Kalın |
 | Ctrl+I | İtalik |
 | Ctrl+U | Altı çizili |
-| Delete | Notu çöpe taşı |
-
-### Arayüz Bölümleri
-
-#### Üst Çubuk
-- **Notlar**: Ana not görünümüne geç
-- **Git Takip**: GitHub repo takip paneli
-- **Takvim**: Takvim görünümü
-- **İstatistikler**: Not istatistikleri
-- **Not Seç**: Hızlı not seçimi dropdown menüsü
-- **Arama**: Not içeriğinde arama
-- **Gelişmiş Arama**: Detaylı arama seçenekleri
-
-#### Sol Panel
-- **Filtreler**: Tüm notlar, favoriler, şifreli notlar, çöp kutusu
-- **Kategoriler**: Not kategorileri ağaç yapısında
-- **Etiketler**: Tüm etiketler listesi
-
-#### Orta Panel
-- Not kartları listesi
-- Tarihe göre sıralama
-- Görünüm menüsünden gizlenebilir (Ctrl+L)
-
-#### Sağ Panel
-- Not başlığı
-- Kategori ve etiket seçimi
-- Zengin metin düzenleyici
-- Kaydet, Sürüm Geçmişi, Sil butonları
+| Ctrl+Z | Geri al |
+| Ctrl+Y | Yinele |
 
 ### Git Takip Özelliği
 
-1. "Git Takip" sekmesine geçin
-2. "Repo Ekle" butonuna tıklayın
-3. GitHub repo URL'sini girin (örn: `https://github.com/kullanici/repo`)
-4. Uygulama yeni commitleri otomatik kontrol eder ve bildirim gönderir
+1. Üst çubuktan "🔄 Git Takip" sekmesine geçin
+2. "+ Repo Ekle" butonuna tıklayın
+3. GitHub veya GitLab repo URL'sini girin
+   - Örnek: `https://github.com/kullanici/repo`
+   - Örnek: `https://gitlab.com/kullanici/repo`
+4. "🔄 Kontrol Et" ile yeni commitleri kontrol edin
+5. Yeşil nokta (🟢) güncelleme olduğunu gösterir
+6. Repo'ya çift tıklayarak tarayıcıda açın
 
 ### Şifreli Not Oluşturma
 
-1. Yeni not oluşturun
-2. Araç çubuğundan kilit ikonuna tıklayın
-3. Şifre belirleyin
-4. Notu açmak için şifreyi girmeniz gerekecek
+1. Menüden veya araç çubuğundan şifreli not özelliğini kullanın
+2. Şifre belirleyin
+3. Notu açmak için şifreyi girmeniz gerekecek
 
 ### Sürüm Geçmişi
 
 1. Bir not seçin
 2. "Sürüm Geçmişi" butonuna tıklayın
-3. Geçmiş sürümleri görüntüleyin ve geri yükleyin
+3. Geçmiş sürümleri görüntüleyin
+4. İstediğiniz sürümü geri yükleyin
+
+### Metin Çevirisi
+
+1. Düzenleyicide metin seçin (veya hiçbir şey seçmeyin - tüm içerik)
+2. Sağ tıklayın
+3. "Seçili Metni Çevir" veya "Hızlı Çeviri" alt menüsünü kullanın
+4. Desteklenen diller: İngilizce ↔ Türkçe, Otomatik algılama
 
 ## Dosya Konumları
 
 | Dosya | Konum |
 |-------|-------|
-| Veritabanı | `%USERPROFILE%\Documents\NotDefteri\notlar.db` |
-| Ekler | `%USERPROFILE%\Documents\NotDefteri\ekler\` |
-| Git Repo Listesi | `%USERPROFILE%\Documents\NotDefteri\git_repolar.json` |
+| Veritabanı | `{uygulama_klasörü}/notlar.db` |
 
 ## Sorun Giderme
 
 ### Uygulama Açılmıyor
 - Python 3.11+ yüklü olduğundan emin olun
 - `pip install -r requirements.txt` ile bağımlılıkları yükleyin
+- Hata mesajını görmek için komut satırından çalıştırın
 
 ### Türkçe Karakterler Bozuk Görünüyor
-- Sistem dil ayarlarınızı kontrol edin
-- UTF-8 kodlaması kullanıldığından emin olun
+- Dosyaların UTF-8 kodlamasında olduğundan emin olun
 
-### GitHub API Hatası (Rate Limit)
+### GitHub API Hatası (403 Rate Limit)
 - Çok fazla istek gönderildiğinde oluşur
-- Uygulama otomatik olarak istekler arası bekleme yapar
+- Uygulama otomatik olarak istekler arası 1.5 saniye bekler
+- Birkaç dakika bekleyip tekrar deneyin
 
 ### EXE Dosyası Çalışmıyor
 - Antivirüs yazılımının engellemediğinden emin olun
 - Windows Defender'da istisna ekleyin
-- Visual C++ Redistributable yüklü olduğundan emin olun
+- Visual C++ Redistributable 2015-2022 yüklü olduğundan emin olun
+
+### Modül Bulunamadı Hatası
+- İlgili opsiyonel bağımlılığı yükleyin
+- Örnek: Çeviri için `pip install deep-translator`
 
 ## Lisans
 
 Bu proje kişisel kullanım için geliştirilmiştir.
-
-## Katkıda Bulunma
-
-Hata bildirimleri ve öneriler için issue açabilirsiniz.
