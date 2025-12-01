@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux + NVIDIA GPU Fine-Tuning Rehberi</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Linux + NVIDIA GPU Fine-Tuning Rehberi</h1>
+            <p>Endustri Standardi - En Yuksek Performans</p>
+        </div>
+    </header>
+
+    <nav>
+        <a href="index.html">Ana Sayfa</a>
+        <a href="#gereksinimler">Gereksinimler</a>
+        <a href="#kurulum">Kurulum</a>
+        <a href="#egitim">Egitim</a>
+        <a href="#ileri">Ileri Seviye</a>
+    </nav>
+
+    <main>
+        <div class="container">
+
+            <div class="alert alert-success">
+                <strong>En Iyi Performans!</strong>
+                Linux + NVIDIA, yapay zeka egitimi icin endustri standartidir. Tum profesyonel araclar
+                ve en iyi performans bu platformda elde edilir.
+            </div>
+
+            <!-- ICINDEKILER -->
+            <div class="toc">
+                <h3>Bu Rehberde</h3>
+                <ol>
+                    <li><a href="#gereksinimler">Gereksinimler</a></li>
+                    <li><a href="#kurulum">Driver ve PyTorch Kurulumu</a></li>
+                    <li><a href="#egitim">Fine-Tuning Yapma</a></li>
+                    <li><a href="#unsloth">Unsloth ile Hizli Egitim</a></li>
+                    <li><a href="#ileri">Ileri Seviye: Coklu GPU, DeepSpeed</a></li>
+                    <li><a href="#sorunlar">Sorun Giderme</a></li>
+                </ol>
+            </div>
+
+            <!-- BOLUM 1: GEREKSINIMLER -->
+            <section id="gereksinimler">
+                <h2>1. Gereksinimler</h2>
+
+                <div class="requirements">
+                    <h4>Sistem Gereksinimleri</h4>
+                    <ul>
+                        <li>Ubuntu 22.04 LTS veya 24.04 LTS</li>
+                        <li>NVIDIA GPU (GTX 1080+, RTX 20xx/30xx/40xx)</li>
+                        <li>En az 16 GB RAM (32 GB onerilen)</li>
+                        <li>50 GB bos disk alani</li>
+                    </ul>
+                </div>
+
+                <h3>GPU Uyumlulugu</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>GPU</th>
+                            <th>VRAM</th>
+                            <th>Egitebilecegi Model</th>
+                            <th>Not</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>RTX 4090</td>
+                            <td>24 GB</td>
+                            <td>13B QLoRA, 7B LoRA</td>
+                            <td>Tuketici icin en iyi</td>
+                        </tr>
+                        <tr>
+                            <td>RTX 4080</td>
+                            <td>16 GB</td>
+                            <td>7B QLoRA</td>
+                            <td>Iyi performans</td>
+                        </tr>
+                        <tr>
+                            <td>RTX 3090</td>
+                            <td>24 GB</td>
+                            <td>13B QLoRA, 7B LoRA</td>
+                            <td>Uygun fiyat/performans</td>
+                        </tr>
+                        <tr>
+                            <td>RTX 3080</td>
+                            <td>10 GB</td>
+                            <td>7B QLoRA</td>
+                            <td>Sinirli bellek</td>
+                        </tr>
+                        <tr>
+                            <td>A100</td>
+                            <td>40/80 GB</td>
+                            <td>70B QLoRA</td>
+                            <td>Profesyonel</td>
+                        </tr>
+                        <tr>
+                            <td>H100</td>
+                            <td>80 GB</td>
+                            <td>70B+ LoRA</td>
+                            <td>En guclu</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- BOLUM 2: KURULUM -->
+            <section id="kurulum">
+                <h2>2. Driver ve PyTorch Kurulumu</h2>
+
+                <!-- ADIM 1 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Sistemi Guncelle</div>
+                    </div>
+                    <pre>sudo apt update && sudo apt upgrade -y
+sudo reboot</pre>
+                </div>
+
+                <!-- ADIM 2 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">NVIDIA Driver Kur</div>
+                    </div>
+
+                    <p><strong>Yontem A: Ubuntu onerilen driver (Kolay)</strong></p>
+                    <pre># Onerilen driver'i gor
+ubuntu-drivers devices
+
+# Otomatik kur
+sudo ubuntu-drivers autoinstall
+sudo reboot</pre>
+
+                    <p><strong>Yontem B: Belirli surum kur</strong></p>
+                    <pre>sudo apt install nvidia-driver-545
+sudo reboot</pre>
+
+                    <p><strong>Dogrula:</strong></p>
+                    <pre>nvidia-smi</pre>
+
+                    <div class="expected-output">
+                        <pre>+-----------------------------------------------------------------------------+
+| NVIDIA-SMI 545.xx       Driver Version: 545.xx       CUDA Version: 12.3    |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+|   0  NVIDIA GeForce RTX 4090 Off  | 00000000:01:00.0 Off |                  Off |
+| 30%   35C    P8    20W / 450W |    0MiB / 24564MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 3 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Python Ortami Olustur</div>
+                    </div>
+                    <pre># Python 3.11 kur
+sudo apt install -y python3.11 python3.11-venv python3-pip
+
+# Calisma klasoru
+mkdir -p ~/fine-tuning && cd ~/fine-tuning
+
+# Virtual environment
+python3.11 -m venv venv
+source venv/bin/activate
+
+# pip guncelle
+pip install --upgrade pip wheel setuptools</pre>
+                </div>
+
+                <!-- ADIM 4 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">PyTorch CUDA Kur</div>
+                    </div>
+                    <pre># CUDA 12.4 ile PyTorch
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124</pre>
+
+                    <p><strong>Dogrula:</strong></p>
+                    <pre>python << 'EOF'
+import torch
+print(f"PyTorch: {torch.__version__}")
+print(f"CUDA mevcut: {torch.cuda.is_available()}")
+print(f"CUDA surumu: {torch.version.cuda}")
+print(f"cuDNN surumu: {torch.backends.cudnn.version()}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+EOF</pre>
+
+                    <div class="expected-output">
+                        <pre>PyTorch: 2.4.0+cu124
+CUDA mevcut: True
+CUDA surumu: 12.4
+cuDNN surumu: 90100
+GPU: NVIDIA GeForce RTX 4090
+VRAM: 24.0 GB</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 5 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div class="step-title">Fine-Tuning Paketlerini Kur</div>
+                    </div>
+                    <pre>pip install transformers datasets accelerate peft trl bitsandbytes
+pip install sentencepiece protobuf huggingface_hub
+
+# Flash Attention 2 (onerilen - hiz artisi)
+pip install flash-attn --no-build-isolation
+
+# Hugging Face giris
+huggingface-cli login</pre>
+                </div>
+
+                <!-- ADIM 6 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">6</div>
+                        <div class="step-title">Kurulumu Dogrula</div>
+                    </div>
+                    <pre>python << 'EOF'
+print("=" * 50)
+print("KURULUM KONTROLU")
+print("=" * 50)
+
+import torch
+print(f"PyTorch: {torch.__version__}")
+print(f"CUDA: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+
+import transformers
+print(f"Transformers: {transformers.__version__}")
+
+import peft
+print(f"PEFT: {peft.__version__}")
+
+import trl
+print(f"TRL: {trl.__version__}")
+
+import bitsandbytes
+print(f"BitsAndBytes: {bitsandbytes.__version__}")
+
+try:
+    import flash_attn
+    print(f"Flash Attention: {flash_attn.__version__}")
+except:
+    print("Flash Attention: Kurulu degil (opsiyonel)")
+
+print("=" * 50)
+print("KURULUM BASARILI!" if torch.cuda.is_available() else "HATA!")
+EOF</pre>
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>Kurulum Tamamlandi!</strong>
+                </div>
+            </section>
+
+            <!-- BOLUM 3: EGITIM -->
+            <section id="egitim">
+                <h2>3. Fine-Tuning Yapma</h2>
+
+                <!-- ADIM 1 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Dataset Olustur</div>
+                    </div>
+                    <pre>cd ~/fine-tuning
+source venv/bin/activate
+
+cat > dataset.json << 'EOF'
+[
+  {
+    "instruction": "Soruyu yanitla.",
+    "input": "Makine ogrenimi nedir?",
+    "output": "Makine ogrenimi, bilgisayarlarin acikca programlanmadan verilerden ogrenme ve tahmin yapma yetenegi kazanmasini saglayan yapay zeka alt alanidir."
+  },
+  {
+    "instruction": "Kod yaz.",
+    "input": "Fibonacci dizisinin ilk 10 elemanini yazdiran Python kodu",
+    "output": "def fibonacci(n):\n    fib = [0, 1]\n    for i in range(2, n):\n        fib.append(fib[i-1] + fib[i-2])\n    return fib[:n]\n\nprint(fibonacci(10))"
+  },
+  {
+    "instruction": "Acikla.",
+    "input": "Transformer mimarisi",
+    "output": "Transformer, 2017'de Google'in 'Attention Is All You Need' makalesinde tanitilan bir derin ogrenme mimarisidir. Self-attention mekanizmasi kullanarak paralel islem yapar ve sirali verileri etkili sekilde isler. GPT, BERT ve Llama gibi buyuk dil modellerinin temelini olusturur."
+  },
+  {
+    "instruction": "Karsilastir.",
+    "input": "LoRA ve Full Fine-Tuning",
+    "output": "LoRA (Low-Rank Adaptation), modelin sadece kucuk adaptorlerini egitir, bu sayede cok az GPU bellegi kullanir. Full Fine-Tuning ise tum model parametrelerini gunceller, daha iyi sonuc verebilir ama cok fazla bellek ve zaman gerektirir. Cogu durumda LoRA yeterli ve pratiktir."
+  },
+  {
+    "instruction": "Ceviri yap.",
+    "input": "The model achieved state-of-the-art results on the benchmark.",
+    "output": "Model, karsilastirma testinde en iyi sonuclara ulasti."
+  }
+]
+EOF
+
+echo "Dataset olusturuldu!"</pre>
+                </div>
+
+                <!-- ADIM 2 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Egitim Scripti</div>
+                    </div>
+                    <pre>cat > train.py << 'TRAINSCRIPT'
+#!/usr/bin/env python3
+"""Linux + NVIDIA Fine-Tuning Script"""
+
+import torch
+from datasets import load_dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    BitsAndBytesConfig,
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from trl import SFTTrainer
+
+# ==============================================================
+# AYARLAR
+# ==============================================================
+MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
+DATASET_FILE = "dataset.json"
+OUTPUT_DIR = "./output"
+
+EPOCHS = 3
+BATCH_SIZE = 2          # 24GB GPU icin 2, 8GB icin 1
+LEARNING_RATE = 2e-4
+MAX_LENGTH = 512
+
+# ==============================================================
+# GPU KONTROL
+# ==============================================================
+print("=" * 60)
+print("SISTEM BILGISI")
+print("=" * 60)
+
+assert torch.cuda.is_available(), "CUDA bulunamadi!"
+
+print(f"PyTorch: {torch.__version__}")
+print(f"CUDA: {torch.version.cuda}")
+print(f"GPU sayisi: {torch.cuda.device_count()}")
+for i in range(torch.cuda.device_count()):
+    props = torch.cuda.get_device_properties(i)
+    print(f"  GPU {i}: {props.name} ({props.total_memory / 1024**3:.1f} GB)")
+print()
+
+# ==============================================================
+# MODEL
+# ==============================================================
+print("=" * 60)
+print("MODEL YUKLENIYOR")
+print("=" * 60)
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,  # Ampere+ GPU'larda bfloat16
+    bnb_4bit_use_double_quant=True,
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    quantization_config=bnb_config,
+    device_map="auto",
+    attn_implementation="flash_attention_2",  # Flash Attention (kuruluysa)
+    trust_remote_code=True,
+)
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
+
+print(f"Model: {MODEL_ID}")
+print()
+
+# ==============================================================
+# LORA
+# ==============================================================
+print("=" * 60)
+print("LORA AYARLARI")
+print("=" * 60)
+
+model = prepare_model_for_kbit_training(model)
+
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+print()
+
+# ==============================================================
+# DATASET
+# ==============================================================
+print("=" * 60)
+print("DATASET")
+print("=" * 60)
+
+dataset = load_dataset("json", data_files=DATASET_FILE, split="train")
+print(f"Ornek sayisi: {len(dataset)}")
+
+def format_prompt(example):
+    return {"text": f"""### Talimat:
+{example['instruction']}
+
+### Girdi:
+{example['input']}
+
+### Cevap:
+{example['output']}</s>"""}
+
+dataset = dataset.map(format_prompt)
+print()
+
+# ==============================================================
+# EGITIM
+# ==============================================================
+print("=" * 60)
+print("EGITIM BASLIYOR")
+print("=" * 60)
+
+training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    num_train_epochs=EPOCHS,
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=4,
+    learning_rate=LEARNING_RATE,
+    weight_decay=0.01,
+    warmup_ratio=0.03,
+    lr_scheduler_type="cosine",
+    logging_steps=1,
+    save_strategy="epoch",
+    bf16=True,              # bfloat16 (Ampere+ GPU)
+    tf32=True,              # TF32 (Ampere+ GPU, ekstra hiz)
+    optim="adamw_torch_fused",  # Fused optimizer (daha hizli)
+    gradient_checkpointing=True,
+    report_to="none",
+)
+
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    dataset_text_field="text",
+    max_seq_length=MAX_LENGTH,
+)
+
+# Baslangic bellek
+torch.cuda.reset_peak_memory_stats()
+start_mem = torch.cuda.memory_allocated() / 1024**3
+
+trainer.train()
+
+# Bitis bellek
+peak_mem = torch.cuda.max_memory_allocated() / 1024**3
+print(f"\nMaksimum GPU bellek: {peak_mem:.2f} GB")
+
+# ==============================================================
+# KAYDET
+# ==============================================================
+print()
+print("=" * 60)
+print("KAYDETME")
+print("=" * 60)
+
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+print(f"Model kaydedildi: {OUTPUT_DIR}")
+
+print()
+print("=" * 60)
+print("EGITIM TAMAMLANDI!")
+print("=" * 60)
+TRAINSCRIPT
+
+chmod +x train.py
+echo "train.py olusturuldu!"</pre>
+                </div>
+
+                <!-- ADIM 3 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Egitimi Baslat</div>
+                    </div>
+                    <pre>python train.py</pre>
+                </div>
+
+                <!-- ADIM 4 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Test Et</div>
+                    </div>
+                    <pre>cat > test.py << 'TESTSCRIPT'
+#!/usr/bin/env python3
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+print("Model yukleniyor...")
+
+base = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.2-3B-Instruct",
+    torch_dtype=torch.float16,
+    device_map="auto",
+)
+model = PeftModel.from_pretrained(base, "./output")
+tokenizer = AutoTokenizer.from_pretrained("./output")
+model.eval()
+
+def ask(instruction, input_text):
+    prompt = f"### Talimat:\n{instruction}\n\n### Girdi:\n{input_text}\n\n### Cevap:\n"
+    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+    with torch.no_grad():
+        out = model.generate(**inputs, max_new_tokens=200, temperature=0.7, do_sample=True)
+    resp = tokenizer.decode(out[0], skip_special_tokens=True)
+    return resp.split("### Cevap:")[-1].strip() if "### Cevap:" in resp else resp
+
+print("\n" + "=" * 50)
+print(ask("Acikla.", "Fine-tuning neden onemli?"))
+print("=" * 50)
+print(ask("Kod yaz.", "Liste elemanlarini toplayan Python fonksiyonu"))
+TESTSCRIPT
+
+python test.py</pre>
+                </div>
+            </section>
+
+            <!-- BOLUM 4: UNSLOTH -->
+            <section id="unsloth">
+                <h2>4. Unsloth ile Hizli Egitim</h2>
+
+                <div class="alert alert-info">
+                    <strong>Unsloth:</strong> 2-5x hizli, %70 az bellek. Tek GPU icin ideal.
+                </div>
+
+                <pre># Kur
+pip install unsloth
+
+# Egitim scripti
+cat > train_unsloth.py << 'UNSLOTHSCRIPT'
+from unsloth import FastLanguageModel
+from datasets import load_dataset
+from trl import SFTTrainer
+from transformers import TrainingArguments
+import torch
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    "unsloth/Llama-3.2-3B-Instruct",
+    max_seq_length=2048,
+    load_in_4bit=True,
+)
+
+model = FastLanguageModel.get_peft_model(
+    model, r=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+    lora_alpha=16, lora_dropout=0, bias="none",
+    use_gradient_checkpointing="unsloth",
+)
+
+dataset = load_dataset("json", data_files="dataset.json", split="train")
+dataset = dataset.map(lambda x: {"text": f"### Talimat:\n{x['instruction']}\n\n### Girdi:\n{x['input']}\n\n### Cevap:\n{x['output']}{tokenizer.eos_token}"})
+
+trainer = SFTTrainer(
+    model=model, tokenizer=tokenizer,
+    train_dataset=dataset, dataset_text_field="text",
+    max_seq_length=2048,
+    args=TrainingArguments(
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=4,
+        num_train_epochs=3,
+        learning_rate=2e-4,
+        bf16=True,
+        logging_steps=1,
+        output_dir="output_unsloth",
+        optim="adamw_8bit",
+    ),
+)
+
+trainer.train()
+model.save_pretrained("output_unsloth")
+tokenizer.save_pretrained("output_unsloth")
+
+# GGUF export
+model.save_pretrained_gguf("model_gguf", tokenizer, quantization_method="q4_k_m")
+print("Tamamlandi!")
+UNSLOTHSCRIPT
+
+python train_unsloth.py</pre>
+            </section>
+
+            <!-- BOLUM 5: ILERI SEVIYE -->
+            <section id="ileri">
+                <h2>5. Ileri Seviye: Coklu GPU ve DeepSpeed</h2>
+
+                <h3>Coklu GPU (Data Parallel)</h3>
+                <pre># 2 GPU ile egitim
+CUDA_VISIBLE_DEVICES=0,1 accelerate launch --num_processes 2 train.py
+
+# Veya torchrun ile
+torchrun --nproc_per_node=2 train.py</pre>
+
+                <h3>DeepSpeed ZeRO (Buyuk Modeller)</h3>
+                <pre># DeepSpeed kur
+pip install deepspeed
+
+# ds_config.json olustur
+cat > ds_config.json << 'EOF'
+{
+  "bf16": {"enabled": true},
+  "zero_optimization": {
+    "stage": 2,
+    "offload_optimizer": {"device": "cpu"},
+    "contiguous_gradients": true
+  },
+  "gradient_accumulation_steps": 4,
+  "train_batch_size": "auto",
+  "train_micro_batch_size_per_gpu": "auto"
+}
+EOF
+
+# DeepSpeed ile egitim (TrainingArguments'a ekle)
+# deepspeed="ds_config.json"</pre>
+
+                <h3>vLLM ile Model Sunumu</h3>
+                <pre># vLLM kur
+pip install vllm
+
+# Server baslat
+python -m vllm.entrypoints.openai.api_server \
+    --model ./merged_model \
+    --port 8000
+
+# API kullan
+curl http://localhost:8000/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d '{"model": "./merged_model", "messages": [{"role": "user", "content": "Merhaba!"}]}'</pre>
+            </section>
+
+            <!-- BOLUM 6: SORUN GIDERME -->
+            <section id="sorunlar">
+                <h2>6. Sorun Giderme</h2>
+
+                <h3>nvidia-smi calismiyior</h3>
+                <pre># Driver'i yeniden kur
+sudo apt remove --purge nvidia-*
+sudo apt autoremove
+sudo ubuntu-drivers autoinstall
+sudo reboot</pre>
+
+                <h3>Out of Memory</h3>
+                <pre># Ayarlari dusur
+BATCH_SIZE = 1
+MAX_LENGTH = 256
+
+# Gradient checkpointing ekle
+gradient_checkpointing=True
+
+# 4-bit kullan (varsayilan)</pre>
+
+                <h3>Flash Attention hatasi</h3>
+                <pre># Flash Attention olmadan devam et
+# train.py'de attn_implementation satirini kaldir
+
+# Veya yeniden kur
+pip uninstall flash-attn -y
+pip install flash-attn --no-build-isolation</pre>
+
+                <h3>Egitim cok yavas</h3>
+                <pre># GPU kullanim kontrol
+watch -n 1 nvidia-smi
+
+# bf16 ve tf32 etkin mi kontrol et
+# Ampere+ GPU gerekli (RTX 30xx/40xx, A100)
+
+# Fused optimizer kullan
+optim="adamw_torch_fused"</pre>
+            </section>
+
+            <div class="alert alert-success">
+                <strong>Tebrikler!</strong>
+                Linux + NVIDIA rehberini tamamladiniz. Bu en guclu fine-tuning platformudur.
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p><a href="index.html">Ana Sayfa</a> | <a href="windows-nvidia.html">Windows + NVIDIA</a></p>
+        </div>
+    </footer>
+</body>
+</html>

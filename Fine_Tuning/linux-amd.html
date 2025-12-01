@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux + AMD GPU Fine-Tuning Rehberi</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Linux + AMD GPU Fine-Tuning Rehberi</h1>
+            <p>ROCm ile Tam Destekli Fine-Tuning - Strix Halo Dahil</p>
+        </div>
+    </header>
+
+    <nav>
+        <a href="index.html">Ana Sayfa</a>
+        <a href="#gereksinimler">Gereksinimler</a>
+        <a href="#kurulum">Kurulum</a>
+        <a href="#egitim">Egitim</a>
+        <a href="#araclar">Araclar</a>
+    </nav>
+
+    <main>
+        <div class="container">
+
+            <div class="alert alert-success">
+                <strong>AMD GPU icin En Iyi Platform!</strong>
+                Linux + ROCm kombinasyonu AMD GPU'lar icin tam destek saglar. Bu rehberi takip ederek
+                Llama, Mistral, Qwen gibi modelleri kendi verilerinizle egitebilirsiniz.
+            </div>
+
+            <!-- ICINDEKILER -->
+            <div class="toc">
+                <h3>Bu Rehberde</h3>
+                <ol>
+                    <li><a href="#gereksinimler">Gereksinimler ve GPU Uyumlulugu</a></li>
+                    <li><a href="#kurulum">ROCm ve PyTorch Kurulumu</a></li>
+                    <li><a href="#egitim">Fine-Tuning Yapma (Adim Adim)</a></li>
+                    <li><a href="#araclar">Alternatif Araclar (Axolotl, Llama Factory)</a></li>
+                    <li><a href="#strix-halo">Strix Halo Ozel Ayarlar</a></li>
+                    <li><a href="#sorunlar">Sorun Giderme</a></li>
+                </ol>
+            </div>
+
+            <!-- BOLUM 1: GEREKSINIMLER -->
+            <section id="gereksinimler">
+                <h2>1. Gereksinimler ve GPU Uyumlulugu</h2>
+
+                <div class="requirements">
+                    <h4>Sistem Gereksinimleri</h4>
+                    <ul>
+                        <li>Ubuntu 22.04 LTS veya 24.04 LTS (onerilen)</li>
+                        <li>Kernel 5.15 veya uzeri</li>
+                        <li>En az 16 GB RAM (32 GB onerilen)</li>
+                        <li>50 GB bos disk alani</li>
+                    </ul>
+                </div>
+
+                <h3>Desteklenen GPU'lar</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>GPU</th>
+                            <th>Kod Adi</th>
+                            <th>VRAM</th>
+                            <th>ROCm Destek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>RX 7900 XTX</td>
+                            <td>gfx1100</td>
+                            <td>24 GB</td>
+                            <td>Tam Destek</td>
+                        </tr>
+                        <tr>
+                            <td>RX 7900 XT</td>
+                            <td>gfx1100</td>
+                            <td>20 GB</td>
+                            <td>Tam Destek</td>
+                        </tr>
+                        <tr>
+                            <td>RX 7800 XT</td>
+                            <td>gfx1101</td>
+                            <td>16 GB</td>
+                            <td>Tam Destek</td>
+                        </tr>
+                        <tr>
+                            <td>RX 7600</td>
+                            <td>gfx1102</td>
+                            <td>8 GB</td>
+                            <td>Tam Destek</td>
+                        </tr>
+                        <tr>
+                            <td>RX 6900 XT</td>
+                            <td>gfx1030</td>
+                            <td>16 GB</td>
+                            <td>Tam Destek</td>
+                        </tr>
+                        <tr>
+                            <td>RX 6800 XT</td>
+                            <td>gfx1030</td>
+                            <td>16 GB</td>
+                            <td>Tam Destek</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Strix Halo (Ryzen AI MAX+ 395)</strong></td>
+                            <td>gfx1151</td>
+                            <td>128 GB unified</td>
+                            <td>ROCm 6.2+ (deneysel)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <strong>GPU Kodunu Ogren:</strong>
+                    Kurulumdan sonra <code>rocminfo | grep "gfx"</code> komutu ile GPU kodunuzu ogrenebilirsiniz.
+                </div>
+            </section>
+
+            <!-- BOLUM 2: KURULUM -->
+            <section id="kurulum">
+                <h2>2. ROCm ve PyTorch Kurulumu</h2>
+
+                <!-- ADIM 1 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Sistem Guncelle</div>
+                    </div>
+                    <pre>sudo apt update && sudo apt upgrade -y
+sudo reboot</pre>
+                    <p class="cmd-explain">Sistemi guncellemek, uyumluluk sorunlarini onler.</p>
+                </div>
+
+                <!-- ADIM 2 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">ROCm Repository Ekle</div>
+                    </div>
+                    <pre># Gerekli paketleri kur
+sudo apt install -y wget gnupg2
+
+# AMD GPG anahtarini ekle
+wget -q -O - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+
+# ROCm 6.2 repository ekle (Ubuntu 22.04 icin)
+echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.2 jammy main' | \
+    sudo tee /etc/apt/sources.list.d/rocm.list
+
+# Ubuntu 24.04 icin:
+# echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.2 noble main' | \
+#     sudo tee /etc/apt/sources.list.d/rocm.list
+
+sudo apt update</pre>
+                </div>
+
+                <!-- ADIM 3 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">ROCm Kur</div>
+                    </div>
+                    <pre># ROCm HIP runtime ve SDK
+sudo apt install -y rocm-hip-runtime rocm-hip-sdk
+
+# Kullaniciyi gerekli gruplara ekle
+sudo usermod -aG video $USER
+sudo usermod -aG render $USER
+
+# Cikis yap ve tekrar giris yap (veya reboot)
+sudo reboot</pre>
+                </div>
+
+                <!-- ADIM 4 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">PATH Ayarla</div>
+                    </div>
+                    <pre># .bashrc dosyasina ekle
+echo 'export PATH=/opt/rocm/bin:$PATH' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=/opt/rocm/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+source ~/.bashrc</pre>
+                </div>
+
+                <!-- ADIM 5 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div class="step-title">ROCm Kurulumunu Dogrula</div>
+                    </div>
+                    <pre>rocminfo | head -50</pre>
+
+                    <div class="expected-output">
+                        <pre>ROCk module is loaded
+=====================
+HSA System Attributes
+=====================
+...
+*******
+Agent 2
+*******
+  Name:                    AMD Radeon RX 7900 XTX
+  ...
+  Device Type:             GPU
+  ...</pre>
+                    </div>
+
+                    <p>GPU listesini gor:</p>
+                    <pre>rocm-smi</pre>
+
+                    <div class="expected-output">
+                        <pre>========================= ROCm System Management Interface =========================
+==================================== Concise Info ====================================
+GPU  Temp   AvgPwr  SCLK    MCLK     Fan  Perf  PwrCap  VRAM%  GPU%
+0    42c    25.0W   500Mhz  1000Mhz  0%   auto  303.0W   0%    0%
+======================================================================================</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 6 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">6</div>
+                        <div class="step-title">Python Ortami Olustur</div>
+                    </div>
+                    <pre># Python 3.11 kur (eger yoksa)
+sudo apt install -y python3.11 python3.11-venv python3-pip
+
+# Calisma klasoru olustur
+mkdir -p ~/fine-tuning && cd ~/fine-tuning
+
+# Virtual environment olustur
+python3.11 -m venv venv
+source venv/bin/activate
+
+# pip guncelle
+pip install --upgrade pip wheel setuptools</pre>
+                </div>
+
+                <!-- ADIM 7 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">7</div>
+                        <div class="step-title">PyTorch ROCm Kur</div>
+                    </div>
+                    <pre>pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2</pre>
+
+                    <p>Kurulumu test et:</p>
+                    <pre>python << 'EOF'
+import torch
+print(f"PyTorch: {torch.__version__}")
+print(f"ROCm: {torch.version.hip}")
+print(f"GPU sayisi: {torch.cuda.device_count()}")
+if torch.cuda.is_available():
+    print(f"GPU 0: {torch.cuda.get_device_name(0)}")
+    mem = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    print(f"VRAM: {mem:.1f} GB")
+else:
+    print("HATA: GPU bulunamadi!")
+EOF</pre>
+
+                    <div class="expected-output">
+                        <pre>PyTorch: 2.4.0+rocm6.2
+ROCm: 6.2.41133-dd7f95766
+GPU sayisi: 1
+GPU 0: AMD Radeon RX 7900 XTX
+VRAM: 24.0 GB</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 8 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">8</div>
+                        <div class="step-title">Fine-Tuning Paketlerini Kur</div>
+                    </div>
+                    <pre># Temel paketler
+pip install transformers datasets accelerate peft trl sentencepiece protobuf
+
+# Hugging Face CLI (model indirmek icin)
+pip install huggingface_hub
+huggingface-cli login  # Token'inizi girin (huggingface.co/settings/tokens)</pre>
+
+                    <h4>BitsAndBytes (4-bit Quantization icin)</h4>
+                    <p>BitsAndBytes AMD'de ozel kurulum gerektirir:</p>
+                    <pre># AMD icin ozel fork
+pip install bitsandbytes-rocm
+
+# Eger bu calismaz ise, kaynak koddan derle:
+git clone https://github.com/ROCm/bitsandbytes.git
+cd bitsandbytes
+pip install -e .</pre>
+
+                    <div class="alert alert-warning">
+                        <strong>BitsAndBytes Sorunu:</strong>
+                        Eger bitsandbytes calismaz ise, 4-bit quantization olmadan devam edin.
+                        Bu daha fazla VRAM kullanir ama calisir.
+                    </div>
+                </div>
+
+                <!-- ADIM 9 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">9</div>
+                        <div class="step-title">Kurulumu Dogrula</div>
+                    </div>
+                    <pre>python << 'EOF'
+print("=" * 60)
+print("KURULUM KONTROLU")
+print("=" * 60)
+
+import torch
+print(f"PyTorch: {torch.__version__}")
+print(f"ROCm mevcut: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+
+import transformers
+print(f"Transformers: {transformers.__version__}")
+
+import peft
+print(f"PEFT: {peft.__version__}")
+
+import trl
+print(f"TRL: {trl.__version__}")
+
+import datasets
+print(f"Datasets: {datasets.__version__}")
+
+try:
+    import bitsandbytes
+    print(f"BitsAndBytes: {bitsandbytes.__version__}")
+except:
+    print("BitsAndBytes: Kurulu degil (opsiyonel)")
+
+print("=" * 60)
+if torch.cuda.is_available():
+    print("KURULUM BASARILI!")
+else:
+    print("HATA: GPU bulunamadi!")
+EOF</pre>
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>Kurulum Tamamlandi!</strong>
+                    Simdi fine-tuning yapabilirsiniz.
+                </div>
+            </section>
+
+            <!-- BOLUM 3: EGITIM -->
+            <section id="egitim">
+                <h2>3. Fine-Tuning Yapma (Adim Adim)</h2>
+
+                <!-- ADIM 1 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Calisma Klasorune Git</div>
+                    </div>
+                    <pre>cd ~/fine-tuning
+source venv/bin/activate</pre>
+                </div>
+
+                <!-- ADIM 2 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Dataset Olustur</div>
+                    </div>
+
+                    <p>Fine-tuning icin verinizi JSON formatinda hazirlayin:</p>
+
+                    <pre>cat > dataset.json << 'DATASET'
+[
+  {
+    "instruction": "Soruyu yanitla.",
+    "input": "Yapay zeka nedir?",
+    "output": "Yapay zeka, bilgisayarlarin insan benzeri dusunme ve ogrenme yetenekleri kazanmasini saglayan teknolojiler butunudur. Makine ogrenimi, derin ogrenme ve dogal dil isleme gibi alt alanlari kapsar."
+  },
+  {
+    "instruction": "Kodu acikla.",
+    "input": "for i in range(5): print(i)",
+    "output": "Bu Python kodu 0'dan 4'e kadar olan sayilari sirayla ekrana yazdirir. range(5) fonksiyonu 0, 1, 2, 3, 4 degerlerini uretir ve for dongusu her birini i degiskenine atar."
+  },
+  {
+    "instruction": "Ceviri yap.",
+    "input": "Machine learning is a subset of artificial intelligence.",
+    "output": "Makine ogrenimi, yapay zekanin bir alt kumesindir."
+  },
+  {
+    "instruction": "Ozet cikar.",
+    "input": "ROCm, AMD tarafindan gelistirilen acik kaynakli bir GPU hesaplama platformudur. CUDA'ya alternatif olarak tasarlanmistir ve AMD GPU'larda yuksek performansli hesaplama yapmak icin kullanilir. Derin ogrenme, bilimsel hesaplama ve veri analizi gibi alanlarda yaygin kullanilir.",
+    "output": "ROCm, AMD'nin CUDA alternatifi acik kaynakli GPU hesaplama platformudur."
+  },
+  {
+    "instruction": "Soru sor.",
+    "input": "Fine-tuning hakkinda",
+    "output": "Fine-tuning ile ilgili su sorulari sorabilirsiniz: 1) Hangi model kullanilmali? 2) Ne kadar veri gerekli? 3) Egitim ne kadar surer? 4) Sonuclari nasil degerlendirebilirim?"
+  }
+]
+DATASET
+
+echo "dataset.json olusturuldu! ($(wc -l < dataset.json) satir)"</pre>
+
+                    <div class="alert alert-info">
+                        <strong>Dataset Boyutu:</strong>
+                        <ul>
+                            <li>Test icin: 5-10 ornek (bu rehberdeki gibi)</li>
+                            <li>Gercek kullanim: 100-1000+ ornek</li>
+                            <li>Daha fazla ornek = daha iyi sonuc</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- ADIM 3 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Egitim Scriptini Olustur</div>
+                    </div>
+
+                    <pre>cat > train.py << 'SCRIPT'
+#!/usr/bin/env python3
+"""
+AMD ROCm Fine-Tuning Script
+Llama 3.2 modelini QLoRA/LoRA ile egitir
+"""
+
+import os
+import torch
+from datasets import load_dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    BitsAndBytesConfig,
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from trl import SFTTrainer
+
+# ==============================================================
+# AYARLAR
+# ==============================================================
+MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
+DATASET_FILE = "dataset.json"
+OUTPUT_DIR = "./output"
+MAX_SEQ_LENGTH = 512
+EPOCHS = 3
+BATCH_SIZE = 1
+LEARNING_RATE = 2e-4
+
+# 4-bit quantization kullan (bellek tasarrufu)
+# BitsAndBytes calismiyorsa False yap
+USE_4BIT = True
+
+# ==============================================================
+# GPU KONTROL
+# ==============================================================
+print("=" * 60)
+print("GPU KONTROL")
+print("=" * 60)
+
+if not torch.cuda.is_available():
+    print("HATA: GPU bulunamadi!")
+    print("ROCm kurulumunu kontrol edin: rocminfo")
+    exit(1)
+
+gpu_name = torch.cuda.get_device_name(0)
+gpu_mem = torch.cuda.get_device_properties(0).total_memory / 1024**3
+print(f"GPU: {gpu_name}")
+print(f"VRAM: {gpu_mem:.1f} GB")
+print()
+
+# ==============================================================
+# MODEL YUKLEME
+# ==============================================================
+print("=" * 60)
+print("MODEL YUKLENIYOR")
+print("=" * 60)
+
+# Quantization ayarlari
+if USE_4BIT:
+    try:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
+        print("4-bit quantization etkin")
+    except Exception as e:
+        print(f"4-bit yuklenemedi: {e}")
+        print("Quantization olmadan devam ediliyor...")
+        bnb_config = None
+        USE_4BIT = False
+else:
+    bnb_config = None
+
+# Model yukle
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    quantization_config=bnb_config,
+    device_map="auto",
+    torch_dtype=torch.float16,
+    trust_remote_code=True,
+)
+
+# Tokenizer yukle
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
+
+print(f"Model: {MODEL_ID}")
+print(f"Parametre sayisi: {model.num_parameters():,}")
+print()
+
+# ==============================================================
+# LORA AYARLARI
+# ==============================================================
+print("=" * 60)
+print("LORA HAZIRLANIYOR")
+print("=" * 60)
+
+if USE_4BIT:
+    model = prepare_model_for_kbit_training(model)
+
+lora_config = LoraConfig(
+    r=16,                     # Rank - dusuk = az parametre, yuksek = daha fazla kapasite
+    lora_alpha=32,            # Alpha - genellikle 2*r
+    target_modules=[          # Egitilecek katmanlar
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    ],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+print()
+
+# ==============================================================
+# DATASET
+# ==============================================================
+print("=" * 60)
+print("DATASET YUKLENIYOR")
+print("=" * 60)
+
+dataset = load_dataset("json", data_files=DATASET_FILE, split="train")
+print(f"Ornek sayisi: {len(dataset)}")
+
+# Prompt formatlama
+def format_example(example):
+    text = f"""### Talimat:
+{example['instruction']}
+
+### Girdi:
+{example['input']}
+
+### Cevap:
+{example['output']}</s>"""
+    return {"text": text}
+
+dataset = dataset.map(format_example)
+print("Ornek prompt:")
+print("-" * 40)
+print(dataset[0]["text"][:300] + "...")
+print()
+
+# ==============================================================
+# EGITIM
+# ==============================================================
+print("=" * 60)
+print("EGITIM BASLIYOR")
+print("=" * 60)
+
+training_args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    num_train_epochs=EPOCHS,
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=4,
+    learning_rate=LEARNING_RATE,
+    weight_decay=0.01,
+    warmup_ratio=0.03,
+    lr_scheduler_type="cosine",
+    logging_steps=1,
+    save_strategy="epoch",
+    fp16=True,
+    optim="adamw_torch",
+    report_to="none",
+    seed=42,
+)
+
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    dataset_text_field="text",
+    max_seq_length=MAX_SEQ_LENGTH,
+    packing=False,
+)
+
+# Baslangiç bellek
+start_mem = torch.cuda.memory_allocated() / 1024**3
+print(f"Baslangic GPU bellek: {start_mem:.2f} GB")
+print()
+
+# Egitim
+trainer.train()
+
+# Bitis bellek
+end_mem = torch.cuda.max_memory_allocated() / 1024**3
+print(f"Maksimum GPU bellek: {end_mem:.2f} GB")
+print()
+
+# ==============================================================
+# KAYDETME
+# ==============================================================
+print("=" * 60)
+print("MODEL KAYDEDILIYOR")
+print("=" * 60)
+
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+
+print(f"Model kaydedildi: {OUTPUT_DIR}")
+print()
+print("=" * 60)
+print("EGITIM TAMAMLANDI!")
+print("=" * 60)
+SCRIPT
+
+chmod +x train.py
+echo "train.py olusturuldu!"</pre>
+                </div>
+
+                <!-- ADIM 4 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Egitimi Baslat</div>
+                    </div>
+
+                    <pre>python train.py</pre>
+
+                    <div class="expected-output">
+                        <pre>============================================================
+GPU KONTROL
+============================================================
+GPU: AMD Radeon RX 7900 XTX
+VRAM: 24.0 GB
+
+============================================================
+MODEL YUKLENIYOR
+============================================================
+4-bit quantization etkin
+Model: meta-llama/Llama-3.2-3B-Instruct
+Parametre sayisi: 3,212,749,824
+
+============================================================
+LORA HAZIRLANIYOR
+============================================================
+trainable params: 13,631,488 || all params: 1,713,540,608 || trainable%: 0.7954
+
+============================================================
+DATASET YUKLENIYOR
+============================================================
+Ornek sayisi: 5
+Ornek prompt:
+----------------------------------------
+### Talimat:
+Soruyu yanitla.
+
+### Girdi:
+Yapay zeka nedir?
+
+### Cevap:
+Yapay zeka, bilgisayarlarin insan benzeri...
+
+============================================================
+EGITIM BASLIYOR
+============================================================
+Baslangic GPU bellek: 2.45 GB
+
+{'loss': 2.8765, 'learning_rate': 0.0002, 'epoch': 0.6}
+{'loss': 2.1234, 'learning_rate': 0.00015, 'epoch': 1.2}
+...
+
+Maksimum GPU bellek: 6.78 GB
+
+============================================================
+MODEL KAYDEDILIYOR
+============================================================
+Model kaydedildi: ./output
+
+============================================================
+EGITIM TAMAMLANDI!
+============================================================</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 5 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div class="step-title">Modeli Test Et</div>
+                    </div>
+
+                    <pre>cat > test.py << 'TESTSCRIPT'
+#!/usr/bin/env python3
+"""Egitilmis modeli test et"""
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+print("Model yukleniyor...")
+
+# Base model
+base_model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.2-3B-Instruct",
+    torch_dtype=torch.float16,
+    device_map="auto",
+)
+
+# LoRA adaptoru ekle
+model = PeftModel.from_pretrained(base_model, "./output")
+tokenizer = AutoTokenizer.from_pretrained("./output")
+
+model.eval()
+print("Model yuklendi!\n")
+
+# Test fonksiyonu
+def generate(instruction, input_text=""):
+    prompt = f"""### Talimat:
+{instruction}
+
+### Girdi:
+{input_text}
+
+### Cevap:
+"""
+    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=200,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.9,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    # Sadece cevap kismini al
+    if "### Cevap:" in response:
+        response = response.split("### Cevap:")[-1].strip()
+    return response
+
+# Test ornekleri
+print("=" * 60)
+print("TEST 1: Soru Cevap")
+print("=" * 60)
+print(generate("Soruyu yanitla.", "Fine-tuning nedir?"))
+print()
+
+print("=" * 60)
+print("TEST 2: Ceviri")
+print("=" * 60)
+print(generate("Ceviri yap.", "Hello, how are you today?"))
+print()
+
+print("=" * 60)
+print("TEST 3: Kod Aciklama")
+print("=" * 60)
+print(generate("Kodu acikla.", "def factorial(n): return 1 if n <= 1 else n * factorial(n-1)"))
+TESTSCRIPT
+
+python test.py</pre>
+                </div>
+            </section>
+
+            <!-- BOLUM 4: ARACLAR -->
+            <section id="araclar">
+                <h2>4. Alternatif Araclar</h2>
+
+                <p>Yukaridaki yontem manuel kontrol saglar. Daha kolay araclar da kullanabilirsiniz:</p>
+
+                <h3>A) Llama Factory (Web Arayuzu)</h3>
+                <p>Kod yazmadan web arayuzu ile fine-tuning:</p>
+                <pre># Kurulum
+pip install llama-factory
+
+# Baslat
+llamafactory-cli webui
+
+# Tarayicida ac: http://localhost:7860</pre>
+
+                <h3>B) Axolotl (YAML ile Yapilandirma)</h3>
+                <p>YAML dosyasi ile detayli kontrol:</p>
+                <pre># Kurulum
+pip install axolotl
+
+# config.yaml olustur ve calistir
+axolotl train config.yaml</pre>
+
+                <h3>Hangi Araci Kullanmaliyim?</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Arac</th>
+                            <th>Avantaj</th>
+                            <th>Kim Icin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Manuel (bu rehber)</td>
+                            <td>Tam kontrol, her seyi anliyorsun</td>
+                            <td>Ogrenmek isteyenler</td>
+                        </tr>
+                        <tr>
+                            <td>Llama Factory</td>
+                            <td>Sifir kod, web arayuzu</td>
+                            <td>Yeni baslayanlar</td>
+                        </tr>
+                        <tr>
+                            <td>Axolotl</td>
+                            <td>YAML ile esnek yapilandirma</td>
+                            <td>Tekrarlanabilir deneyler</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- BOLUM 5: STRIX HALO -->
+            <section id="strix-halo">
+                <h2>5. Strix Halo (Ryzen AI MAX+ 395) Ozel Ayarlar</h2>
+
+                <div class="alert alert-warning">
+                    <strong>Strix Halo Yeni Bir Platform</strong>
+                    gfx1151 kodu oldukca yeni. ROCm 6.2+ gerektirir ve bazi ayarlamalar gerekebilir.
+                </div>
+
+                <h3>BIOS Ayarlari</h3>
+                <ol>
+                    <li>BIOS'a gir (baslangicta DEL veya F2)</li>
+                    <li><strong>UMA Frame Buffer Size</strong> veya <strong>VRAM Size</strong> bul</li>
+                    <li>Maksimum degere ayarla (64 GB veya Auto)</li>
+                    <li>Kaydet ve cik</li>
+                </ol>
+
+                <h3>GPU Override (Gerekirse)</h3>
+                <p>Eger gfx1151 taninmiyorsa:</p>
+                <pre># .bashrc'ye ekle
+export HSA_OVERRIDE_GFX_VERSION=11.0.0
+
+# Veya egitim oncesi calistir
+HSA_OVERRIDE_GFX_VERSION=11.0.0 python train.py</pre>
+
+                <h3>Bellek Avantaji</h3>
+                <p>Strix Halo'nun 128 GB unified bellek avantaji var. Daha buyuk modeller egitebilirsiniz:</p>
+                <pre># train.py'de bu ayarlari dene:
+USE_4BIT = False  # Quantization gerekmez
+BATCH_SIZE = 4    # Daha buyuk batch
+MAX_SEQ_LENGTH = 2048  # Daha uzun context</pre>
+            </section>
+
+            <!-- BOLUM 6: SORUN GIDERME -->
+            <section id="sorunlar">
+                <h2>6. Sorun Giderme</h2>
+
+                <h3>GPU bulunamadi</h3>
+                <pre># ROCm kurulumunu kontrol et
+rocminfo | grep "Name"
+
+# Kullanici gruplarda mi?
+groups
+
+# video ve render olmali. Yoksa:
+sudo usermod -aG video $USER
+sudo usermod -aG render $USER
+# Cikis yap tekrar giris yap</pre>
+
+                <h3>Out of Memory hatasi</h3>
+                <pre># train.py'de su ayarlari dusur:
+BATCH_SIZE = 1
+MAX_SEQ_LENGTH = 256
+
+# 4-bit quantization kullan
+USE_4BIT = True
+
+# Gradient checkpointing ekle (SFTTrainer'a):
+# gradient_checkpointing=True</pre>
+
+                <h3>BitsAndBytes hatasi</h3>
+                <pre># AMD fork'unu dene
+pip uninstall bitsandbytes -y
+pip install bitsandbytes-rocm
+
+# Hala calismiyorsa quantization kapat
+# train.py'de: USE_4BIT = False</pre>
+
+                <h3>Egitim cok yavas</h3>
+                <pre># GPU kullanildigini kontrol et
+watch -n 1 rocm-smi
+
+# GPU% 0 ise CPU'da calisiyor demek
+# Model device_map="auto" kullandigini kontrol et</pre>
+            </section>
+
+            <div class="alert alert-success">
+                <strong>Tebrikler!</strong>
+                Linux + AMD GPU ile fine-tuning rehberini tamamladiniz.
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p><a href="index.html">Ana Sayfa</a> | <a href="windows-amd.html">Windows + AMD</a> | <a href="linux-nvidia.html">Linux + NVIDIA</a></p>
+        </div>
+    </footer>
+</body>
+</html>

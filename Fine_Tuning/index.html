@@ -3,396 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Fine-Tuning Rehberi - Ana Sayfa</title>
+    <title>LLM Fine-Tuning Rehberi</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <header>
         <div class="container">
             <h1>LLM Fine-Tuning Rehberi</h1>
-            <p>Buyuk Dil Modellerini Kendi Verilerinizle Egitmenin Kapsamli Turkce Rehberi</p>
+            <p>Platformunuzu secin, bastan sona adim adim takip edin</p>
         </div>
     </header>
 
-    <nav>
-        <div class="container">
-            <ul>
-                <li><a href="index.html" class="active">Ana Sayfa</a></li>
-                <li><a href="windows-amd/index.html">Windows + AMD</a></li>
-                <li><a href="linux-amd/index.html">Linux + AMD</a></li>
-                <li><a href="windows-nvidia/index.html">Windows + NVIDIA</a></li>
-                <li><a href="linux-nvidia/index.html">Linux + NVIDIA</a></li>
-            </ul>
-        </div>
-    </nav>
-
     <main>
         <div class="container">
-            <!-- Giris Bolumu -->
             <section>
-                <h2>Fine-Tuning Nedir?</h2>
-                <p>
-                    <strong>Fine-tuning (ince ayar)</strong>, onceden egitilmis buyuk bir dil modelini (LLM) kendi ozel
-                    verileriniz veya gorevleriniz icin yeniden egitme islemidir. Bu sayede genel amacli bir model,
-                    sizin ihtiyaclariniza ozel hale gelir.
-                </p>
+                <h2>Platformunuzu Secin</h2>
+                <p>Asagidan isletim sisteminizi ve GPU'nuzu secin. Her rehber bastan sona tum adimlari icerir - kurulumdan fine-tuning'e, test etmeden export'a kadar.</p>
 
-                <div class="alert alert-info">
-                    <strong>Ornek:</strong> Meta'nin Llama 3 modelini Turkce musteri hizmetleri icin fine-tune ederek,
-                    modelinizin Turkce musteri sorularina daha dogru ve uygun yanit vermesini saglayabilirsiniz.
-                </div>
-
-                <h3>Neden Fine-Tuning Yapmaliyiz?</h3>
-                <ul>
-                    <li><strong>Ozellestirilmis Yanltlar:</strong> Modeliniz sizin alaninizdaki terminolojiyi ve uslupları ogrenir</li>
-                    <li><strong>Daha Iyi Performans:</strong> Belirli gorevlerde genel modellerden cok daha basarili sonuclar</li>
-                    <li><strong>Veri Gizliligi:</strong> Hassas verileriniz yerel kalir, buluta gondermenize gerek kalmaz</li>
-                    <li><strong>Maliyet Tasarrufu:</strong> API cagrilari yerine yerel model kullanarak uzun vadede tasarruf</li>
-                </ul>
-            </section>
-
-            <!-- Fine-Tuning Turleri -->
-            <section>
-                <h2>Fine-Tuning Yontemleri</h2>
-
-                <div class="card-grid">
-                    <div class="card">
-                        <div class="card-icon">🎯</div>
-                        <h3>Tam Fine-Tuning (Full Fine-Tuning)</h3>
-                        <p>
-                            Modeldeki tum parametreler guncellenir. En yuksek kaliteyi saglar ancak
-                            cok fazla bellek ve hesaplama gucu gerektirir.
-                        </p>
-                        <p><span class="tag tag-experimental">Yuksek Kaynak Gereksinimi</span></p>
-                        <ul>
-                            <li>7B model icin: ~56GB+ VRAM</li>
-                            <li>En iyi sonuc kalitesi</li>
-                            <li>Kurumsal GPU'lar icin uygun</li>
-                        </ul>
+                <div class="platform-grid">
+                    <div class="platform-card">
+                        <h3>Windows + AMD GPU</h3>
+                        <p>AMD Radeon RX 7000, RX 6000 serisi veya AMD Strix Halo (Ryzen AI MAX+ 395)</p>
+                        <span class="status partial">Sinirli Destek</span>
+                        <p><small>ROCm Windows'ta preview asamasinda. Bazi araclar calismaz.</small></p>
+                        <a href="windows-amd.html" class="btn">Rehbere Git</a>
                     </div>
 
-                    <div class="card">
-                        <div class="card-icon">⚡</div>
-                        <h3>LoRA (Low-Rank Adaptation)</h3>
-                        <p>
-                            Modelin parametrelerini dondurup, kucuk "adapter" katmanlari ekleyerek
-                            egitim yapar. Cok daha az bellek kullanir.
-                        </p>
-                        <p><span class="tag tag-stable">Onerilen Yontem</span></p>
-                        <ul>
-                            <li>7B model icin: ~8-16GB VRAM</li>
-                            <li>%1'den az parametre egitilir</li>
-                            <li>Tuketici GPU'larda calisir</li>
-                        </ul>
+                    <div class="platform-card">
+                        <h3>Linux + AMD GPU</h3>
+                        <p>AMD Radeon RX 7000, RX 6000 serisi veya AMD Strix Halo (Ryzen AI MAX+ 395)</p>
+                        <span class="status full">Tam Destek</span>
+                        <p><small>ROCm tam destekli. Cogu arac calisir.</small></p>
+                        <a href="linux-amd.html" class="btn">Rehbere Git</a>
                     </div>
 
-                    <div class="card">
-                        <div class="card-icon">🔥</div>
-                        <h3>QLoRA (Quantized LoRA)</h3>
-                        <p>
-                            LoRA'nin 4-bit quantization ile birlestirilmis hali. Bellek kullanimini
-                            minimuma indirerek buyuk modelleri kucuk GPU'larda egitmenizi saglar.
-                        </p>
-                        <p><span class="tag tag-stable">En Populer</span></p>
-                        <ul>
-                            <li>7B model icin: ~4-8GB VRAM</li>
-                            <li>Tam fine-tuning'in %8'i kadar bellek</li>
-                            <li>Kalite kaybi ihmal edilebilir</li>
-                        </ul>
+                    <div class="platform-card">
+                        <h3>Windows + NVIDIA GPU</h3>
+                        <p>NVIDIA RTX 4000, 3000, 2000 serisi veya Quadro/Tesla</p>
+                        <span class="status full">Tam Destek</span>
+                        <p><small>CUDA tam destekli. Tum araclar calisir.</small></p>
+                        <a href="windows-nvidia.html" class="btn">Rehbere Git</a>
+                    </div>
+
+                    <div class="platform-card">
+                        <h3>Linux + NVIDIA GPU</h3>
+                        <p>NVIDIA RTX 4000, 3000, 2000 serisi veya Quadro/Tesla</p>
+                        <span class="status full">Tam Destek</span>
+                        <p><small>Endustri standardi. Tum araclar calisir.</small></p>
+                        <a href="linux-nvidia.html" class="btn">Rehbere Git</a>
                     </div>
                 </div>
             </section>
 
-            <!-- Platform Secimi -->
             <section>
-                <h2>Platform ve GPU Secinizi Yapin</h2>
-                <p>
-                    Fine-tuning yapabilmek icin uygun donanim ve yazilim kombinasyonuna ihtiyaciniz var.
-                    Asagidan isletim sisteminizi ve GPU markanizi secin:
-                </p>
-
-                <div class="card-grid">
-                    <!-- Windows + AMD -->
-                    <div class="card windows amd">
-                        <div class="card-icon">🪟 + 🔴</div>
-                        <h3>Windows + AMD</h3>
-                        <p>
-                            AMD Radeon RX 7000/9000 serisi veya Ryzen AI Max APU kullaniciları icin.
-                            ROCm on izleme surumuyle PyTorch destegi.
-                        </p>
-                        <p>
-                            <span class="tag tag-amd">AMD</span>
-                            <span class="tag tag-windows">Windows</span>
-                            <span class="tag tag-experimental">On Izleme</span>
-                        </p>
-                        <a href="windows-amd/index.html" class="btn btn-amd">Rehbere Git</a>
-                    </div>
-
-                    <!-- Linux + AMD -->
-                    <div class="card linux amd">
-                        <div class="card-icon">🐧 + 🔴</div>
-                        <h3>Linux + AMD</h3>
-                        <p>
-                            AMD GPU'lar icin en iyi deneyim. ROCm tam destegi,
-                            kurumsal ve tuketici GPU'lar icin kapsamli rehberler.
-                        </p>
-                        <p>
-                            <span class="tag tag-amd">AMD</span>
-                            <span class="tag tag-linux">Linux</span>
-                            <span class="tag tag-stable">Tam Destek</span>
-                        </p>
-                        <a href="linux-amd/index.html" class="btn btn-amd">Rehbere Git</a>
-                    </div>
-
-                    <!-- Windows + NVIDIA -->
-                    <div class="card windows nvidia">
-                        <div class="card-icon">🪟 + 🟢</div>
-                        <h3>Windows + NVIDIA</h3>
-                        <p>
-                            CUDA ile tam destek. En genis arac yelpazesi ve
-                            en kolay kurulum deneyimi.
-                        </p>
-                        <p>
-                            <span class="tag tag-nvidia">NVIDIA</span>
-                            <span class="tag tag-windows">Windows</span>
-                            <span class="tag tag-stable">Tam Destek</span>
-                        </p>
-                        <a href="windows-nvidia/index.html" class="btn btn-nvidia">Rehbere Git</a>
-                    </div>
-
-                    <!-- Linux + NVIDIA -->
-                    <div class="card linux nvidia">
-                        <div class="card-icon">🐧 + 🟢</div>
-                        <h3>Linux + NVIDIA</h3>
-                        <p>
-                            Profesyonel AI gelistirme icin en populer platform.
-                            Tum araclar ve kutuphaneler tam destekli.
-                        </p>
-                        <p>
-                            <span class="tag tag-nvidia">NVIDIA</span>
-                            <span class="tag tag-linux">Linux</span>
-                            <span class="tag tag-stable">Tam Destek</span>
-                        </p>
-                        <a href="linux-nvidia/index.html" class="btn btn-nvidia">Rehbere Git</a>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Karsilastirma Tablosu -->
-            <section>
-                <h2>Platform Karsilastirmasi</h2>
-                <div class="comparison-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ozellik</th>
-                                <th>Windows + AMD</th>
-                                <th>Linux + AMD</th>
-                                <th>Windows + NVIDIA</th>
-                                <th>Linux + NVIDIA</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>PyTorch Destegi</td>
-                                <td><span class="partial">⚠️</span> On Izleme</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                            </tr>
-                            <tr>
-                                <td>LoRA/QLoRA</td>
-                                <td><span class="partial">⚠️</span> Sinirli</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                            </tr>
-                            <tr>
-                                <td>Unsloth</td>
-                                <td><span class="cross">✗</span> Yok</td>
-                                <td><span class="partial">⚠️</span> Fork ile</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                            </tr>
-                            <tr>
-                                <td>Torchtune</td>
-                                <td><span class="partial">⚠️</span> Sinirli</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="check">✓</span> Tam</td>
-                            </tr>
-                            <tr>
-                                <td>Axolotl</td>
-                                <td><span class="cross">✗</span> Yok</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="partial">⚠️</span> WSL ile</td>
-                                <td><span class="check">✓</span> Tam</td>
-                            </tr>
-                            <tr>
-                                <td>Llama Factory</td>
-                                <td><span class="cross">✗</span> Yok</td>
-                                <td><span class="check">✓</span> Tam</td>
-                                <td><span class="partial">⚠️</span> WSL ile</td>
-                                <td><span class="check">✓</span> Tam</td>
-                            </tr>
-                            <tr>
-                                <td>Kurulum Kolayligi</td>
-                                <td>⭐⭐</td>
-                                <td>⭐⭐⭐</td>
-                                <td>⭐⭐⭐⭐⭐</td>
-                                <td>⭐⭐⭐⭐</td>
-                            </tr>
-                            <tr>
-                                <td>Topluluk Destegi</td>
-                                <td>⭐⭐</td>
-                                <td>⭐⭐⭐</td>
-                                <td>⭐⭐⭐⭐⭐</td>
-                                <td>⭐⭐⭐⭐⭐</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Donanim Gereksinimleri -->
-            <section>
-                <h2>Minimum Donanim Gereksinimleri</h2>
-
-                <div class="alert alert-warning">
-                    <strong>Onemli:</strong> Fine-tuning, normal model calistirmadan (inference) cok daha fazla
-                    kaynak gerektirir. Asagidaki degerler QLoRA kullanilarak 7B parametreli bir model icin minimum gereksinimlerdir.
-                </div>
+                <h2>Hangi Platformu Secmeliyim?</h2>
 
                 <table>
                     <thead>
                         <tr>
-                            <th>Bilesen</th>
-                            <th>Minimum</th>
-                            <th>Onerilen</th>
+                            <th>Durum</th>
+                            <th>Oneri</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>GPU VRAM</td>
-                            <td>8 GB</td>
-                            <td>16+ GB</td>
+                            <td>NVIDIA GPU'm var, Windows kullaniyorum</td>
+                            <td><strong>Windows + NVIDIA</strong> - En kolay secim</td>
                         </tr>
                         <tr>
-                            <td>Sistem RAM</td>
-                            <td>32 GB</td>
-                            <td>64+ GB</td>
+                            <td>NVIDIA GPU'm var, Linux kullanabilirim</td>
+                            <td><strong>Linux + NVIDIA</strong> - En iyi performans</td>
                         </tr>
                         <tr>
-                            <td>Depolama</td>
-                            <td>100 GB SSD</td>
-                            <td>500+ GB NVMe SSD</td>
+                            <td>AMD GPU'm var (RX 7000/6000)</td>
+                            <td><strong>Linux + AMD</strong> - Windows'ta cok sinirli</td>
                         </tr>
                         <tr>
-                            <td>AMD GPU</td>
-                            <td>RX 7800 XT (16GB)</td>
-                            <td>RX 7900 XTX (24GB) / Radeon PRO W7900 (48GB)</td>
+                            <td>AMD Strix Halo (Ryzen AI MAX+ 395)</td>
+                            <td><strong>Linux + AMD</strong> - Windows'ta ROCm tam desteklenmiyor</td>
                         </tr>
                         <tr>
-                            <td>NVIDIA GPU</td>
-                            <td>RTX 3080 (10GB)</td>
-                            <td>RTX 4090 (24GB) / A100 (40/80GB)</td>
-                        </tr>
-                        <tr>
-                            <td>AMD APU</td>
-                            <td>Ryzen AI Max+ 395 (64GB)</td>
-                            <td>Ryzen AI Max+ 395 (128GB)</td>
+                            <td>GPU'm yok veya cok eski</td>
+                            <td>Google Colab veya cloud GPU kirala</td>
                         </tr>
                     </tbody>
                 </table>
             </section>
 
-            <!-- Hizli Baslangic -->
             <section>
-                <h2>Hizli Baslangic Adimlari</h2>
+                <h2>Fine-Tuning Nedir? (30 Saniyede)</h2>
+                <p>
+                    <strong>Fine-tuning</strong>, hazir egitilmis bir yapay zeka modelini (ornegin Llama, Mistral)
+                    kendi verilerinle yeniden egitmektir. Boylece model senin istedigin sekilde cevap verir.
+                </p>
 
-                <div class="steps">
-                    <div class="step">
-                        <h3>Platformunuzu Secin</h3>
-                        <p>
-                            Yukaridaki kartlardan isletim sisteminizi ve GPU markanizi secin.
-                            Her platform icin ozel kurulum rehberleri hazirladik.
-                        </p>
-                    </div>
-
-                    <div class="step">
-                        <h3>Gerekli Yazilimlari Kurun</h3>
-                        <p>
-                            GPU suruculerini, PyTorch'u ve gerekli kutuphaneleri platform rehberinize
-                            gore kurun. Her adim detayli aciklanmistir.
-                        </p>
-                    </div>
-
-                    <div class="step">
-                        <h3>Modelinizi ve Veri Setinizi Secin</h3>
-                        <p>
-                            Hugging Face'den egitim icin bir temel model secin (ornegin Llama 3, Mistral).
-                            Veri setinizi uygun formatta hazirlayin.
-                        </p>
-                    </div>
-
-                    <div class="step">
-                        <h3>Fine-Tuning Baslatın</h3>
-                        <p>
-                            Rehberimizdeki ornek kodlari kullanarak fine-tuning islemini baslatin.
-                            LoRA veya QLoRA ile bellek verimli egitim yapin.
-                        </p>
-                    </div>
-
-                    <div class="step">
-                        <h3>Modelinizi Test Edin</h3>
-                        <p>
-                            Egitilen adapterleri temel modelle birlestirin ve modelinizi test edin.
-                            Sonuclardan memnun degilseniz hiperparametreleri ayarlayin.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Onemli Uyarilar -->
-            <section>
-                <h2>Onemli Uyarilar</h2>
-
-                <div class="alert alert-danger">
-                    <strong>Dikkat - AMD Windows Kullanicilari:</strong> Windows'ta AMD GPU ile fine-tuning
-                    henuz deneysel asamadadir. Uretim ortami icin Linux kullanmanizi oneriyoruz.
-                </div>
-
-                <div class="alert alert-info">
-                    <strong>Bellek Yonetimi:</strong> Fine-tuning sirasinda VRAM yetersizligi yasarsaniz,
-                    batch_size degerini dusurun, gradient checkpointing'i aktif edin veya daha kucuk bir model secin.
-                </div>
-
-                <div class="alert alert-success">
-                    <strong>Ipucu:</strong> Ilk denemeleriniz icin 7B parametreli modellerle (Llama 3.2 7B, Mistral 7B)
-                    baslayin. Bu modeller tuketici GPU'larda rahatca egitim yapmaniza olanak tanir.
-                </div>
-            </section>
-
-            <!-- Kaynaklar -->
-            <section>
-                <h2>Faydali Kaynaklar</h2>
+                <h3>Ornek:</h3>
                 <ul>
-                    <li><a href="https://huggingface.co/docs/peft" target="_blank">Hugging Face PEFT Dokumantasyonu</a> - LoRA ve diger PEFT yontemleri</li>
-                    <li><a href="https://rocm.docs.amd.com/" target="_blank">AMD ROCm Dokumantasyonu</a> - AMD GPU'lar icin resmi rehber</li>
-                    <li><a href="https://pytorch.org/tutorials/" target="_blank">PyTorch Egitim Rehberleri</a> - PyTorch ogrenme kaynaklari</li>
-                    <li><a href="https://github.com/meta-pytorch/torchtune" target="_blank">Torchtune GitHub</a> - Meta'nin fine-tuning kutuphanesi</li>
-                    <li><a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank">Llama Factory GitHub</a> - 100+ LLM icin birlesik fine-tuning araci</li>
+                    <li><strong>Oncesi:</strong> "Turkce siir yaz" diyorsun, model kotu veya Ingilizce siir yaziyor</li>
+                    <li><strong>Sonrasi:</strong> Turkce siir ornekleriyle egitiyorsun, model guzel Turkce siir yaziyor</li>
                 </ul>
+
+                <h3>Fine-Tuning Yontemleri:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Yontem</th>
+                            <th>GPU Bellek</th>
+                            <th>Aciklama</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>QLoRA</strong></td>
+                            <td>4-8 GB</td>
+                            <td>En az bellek kullanan yontem. 7B model 8GB GPU'da calisir. <strong>Bunu kullanacagiz.</strong></td>
+                        </tr>
+                        <tr>
+                            <td>LoRA</td>
+                            <td>8-16 GB</td>
+                            <td>QLoRA'dan biraz daha iyi sonuc, daha fazla bellek</td>
+                        </tr>
+                        <tr>
+                            <td>Full Fine-Tuning</td>
+                            <td>40-80+ GB</td>
+                            <td>Tum modeli egitiyor. Cok pahali GPU gerekir.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section>
+                <h2>Ne Kadar Surer?</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>GPU</th>
+                            <th>7B Model, 1000 ornek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>RTX 4090 (24GB)</td>
+                            <td>10-20 dakika</td>
+                        </tr>
+                        <tr>
+                            <td>RTX 3090 (24GB)</td>
+                            <td>20-40 dakika</td>
+                        </tr>
+                        <tr>
+                            <td>RTX 4070 (12GB)</td>
+                            <td>30-60 dakika</td>
+                        </tr>
+                        <tr>
+                            <td>RX 7900 XTX (24GB)</td>
+                            <td>30-60 dakika (Linux'ta)</td>
+                        </tr>
+                        <tr>
+                            <td>AMD Strix Halo (128GB unified)</td>
+                            <td>Bellek bol, hiz GPU'ya bagli</td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
         </div>
     </main>
 
     <footer>
         <div class="container">
-            <p>
-                Bu rehber acik kaynak toplulugunun ve resmi dokumantasyonlarin bilgilerine dayanarak hazirlanmistir.
-                <br>Son guncelleme: Aralik 2025
-            </p>
+            <p>Her rehber bagimsizdir. Sadece kendi platformunuzun rehberini takip edin.</p>
         </div>
     </footer>
 </body>

@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows + AMD GPU Fine-Tuning Rehberi</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Windows + AMD GPU Fine-Tuning Rehberi</h1>
+            <p>AMD Radeon ve Strix Halo icin adim adim kurulum ve egitim</p>
+        </div>
+    </header>
+
+    <nav>
+        <a href="index.html">Ana Sayfa</a>
+        <a href="#baslangic">Baslangic</a>
+        <a href="#kurulum">Kurulum</a>
+        <a href="#egitim">Egitim</a>
+        <a href="#sorunlar">Sorun Giderme</a>
+    </nav>
+
+    <main>
+        <div class="container">
+
+            <!-- UYARI -->
+            <div class="alert alert-warning">
+                <strong>Onemli Uyari: Windows + AMD Sinirlamalari</strong>
+                ROCm (AMD'nin CUDA karsiligi) Windows'ta henuz tam desteklenmiyor. Bu rehberde iki yol gosterilecek:
+                <ol>
+                    <li><strong>WSL2 (Onerilir):</strong> Windows icinde Linux calistirarak tam destek</li>
+                    <li><strong>DirectML:</strong> Sinirli destek, sadece bazi araclar calisir</li>
+                </ol>
+                En iyi sonuc icin <a href="linux-amd.html">Linux + AMD</a> rehberine bakin.
+            </div>
+
+            <!-- ICINDEKILER -->
+            <div class="toc">
+                <h3>Bu Rehberde</h3>
+                <ol>
+                    <li><a href="#baslangic">Baslangic: Gereksinimler ve Karar</a></li>
+                    <li><a href="#yol1-wsl2">Yol 1: WSL2 ile Kurulum (Onerilir)</a></li>
+                    <li><a href="#yol2-directml">Yol 2: DirectML ile Kurulum (Sinirli)</a></li>
+                    <li><a href="#egitim">Fine-Tuning Yapma</a></li>
+                    <li><a href="#export">Modeli Kaydetme ve Export</a></li>
+                    <li><a href="#sorunlar">Sorun Giderme</a></li>
+                </ol>
+            </div>
+
+            <!-- BOLUM 1: BASLANGIC -->
+            <section id="baslangic">
+                <h2>1. Baslangic: Gereksinimler ve Karar</h2>
+
+                <div class="requirements">
+                    <h4>Sistem Gereksinimleri</h4>
+                    <ul>
+                        <li>Windows 10 (21H2+) veya Windows 11</li>
+                        <li>AMD GPU: RX 6000/7000 serisi veya Strix Halo</li>
+                        <li>En az 16 GB RAM (32 GB onerilen)</li>
+                        <li>50 GB bos disk alani</li>
+                        <li>Internet baglantisi</li>
+                    </ul>
+                </div>
+
+                <h3>Hangi Yolu Secmeliyim?</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Yol</th>
+                            <th>Avantaj</th>
+                            <th>Dezavantaj</th>
+                            <th>Kim Icin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>WSL2 (Onerilir)</strong></td>
+                            <td>Tam ROCm destegi, tum araclar calisir</td>
+                            <td>Linux komutlari ogrenmek gerekir</td>
+                            <td>Ciddi fine-tuning yapacaklar</td>
+                        </tr>
+                        <tr>
+                            <td>DirectML</td>
+                            <td>Dogrudan Windows'ta calisir</td>
+                            <td>Sadece inference, egitim YAPILAMAZ</td>
+                            <td>Sadece model calistirmak isteyenler</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-danger">
+                    <strong>DirectML Gercegi</strong>
+                    DirectML ile fine-tuning (egitim) yapilamaz. DirectML sadece hazir modelleri calistirmak (inference) icindir.
+                    Fine-tuning yapmak istiyorsaniz WSL2 veya Linux kullanmalisiniz.
+                </div>
+            </section>
+
+            <!-- BOLUM 2: WSL2 -->
+            <section id="yol1-wsl2">
+                <h2>2. Yol 1: WSL2 ile Kurulum (Onerilir)</h2>
+
+                <p>WSL2, Windows icinde Linux calistirmanizi saglar. AMD GPU'nuzu Linux'ta kullanarak tam ROCm destegi alirsiniz.</p>
+
+                <!-- ADIM 1 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">WSL2'yi Etkinlestir</div>
+                    </div>
+                    <p>PowerShell'i <strong>Yonetici olarak</strong> ac ve su komutu calistir:</p>
+                    <pre>wsl --install</pre>
+                    <p>Bilgisayarini yeniden baslat.</p>
+
+                    <div class="expected-output">
+                        <pre>Installing: Virtual Machine Platform
+Installing: Windows Subsystem for Linux
+Installing: Ubuntu
+The requested operation is successful.
+Changes will not be effective until the system is rebooted.</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 2 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Ubuntu'yu Baslat ve Kullanici Olustur</div>
+                    </div>
+                    <p>Yeniden baslatmadan sonra Baslat menusunden <strong>Ubuntu</strong> uygulamasini ac.</p>
+                    <p>Senden kullanici adi ve sifre isteyecek. Bunlari gir (sifre yazarken gorunmez, normal).</p>
+
+                    <div class="expected-output">
+                        <pre>Installing, this may take a few minutes...
+Please create a default UNIX user account...
+Enter new UNIX username: kullanici
+New password:
+Retype new password:
+passwd: password updated successfully
+Installation successful!</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 3 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Sistemi Guncelle</div>
+                    </div>
+                    <p>Ubuntu terminalinde su komutlari calistir:</p>
+                    <pre>sudo apt update && sudo apt upgrade -y</pre>
+                    <p class="cmd-explain">Bu komut Ubuntu'nun paket listesini gunceller ve tum paketleri son surume yukseltir.</p>
+                </div>
+
+                <!-- ADIM 4 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">AMD GPU Suruculerini Kur (ROCm)</div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <strong>Strix Halo (gfx1151) Kullanicilari</strong>
+                        Strix Halo yeni bir GPU. ROCm 6.2+ gerektirir. Asagidaki adimlari tam olarak takip edin.
+                    </div>
+
+                    <p><strong>4a.</strong> Repository ekle:</p>
+                    <pre>sudo apt install -y wget gnupg2
+
+# AMD GPG anahtarini ekle
+wget -q -O - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+
+# Repository ekle (Ubuntu 22.04 icin)
+echo 'deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.2 jammy main' | sudo tee /etc/apt/sources.list.d/rocm.list
+
+sudo apt update</pre>
+
+                    <p><strong>4b.</strong> ROCm'u kur:</p>
+                    <pre>sudo apt install -y rocm-hip-runtime rocm-hip-sdk</pre>
+
+                    <p><strong>4c.</strong> Kullaniciyi video grubuna ekle:</p>
+                    <pre>sudo usermod -aG video $USER
+sudo usermod -aG render $USER</pre>
+
+                    <p><strong>4d.</strong> PATH'e ekle (~/.bashrc dosyasina):</p>
+                    <pre>echo 'export PATH=/opt/rocm/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc</pre>
+
+                    <p><strong>4e.</strong> GPU'nun gorundugundan emin ol:</p>
+                    <pre>rocminfo | grep "Name:"</pre>
+
+                    <div class="expected-output">
+                        <pre>  Name:                    AMD Radeon RX 7900 XTX
+  Name:                    gfx1100</pre>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Strix Halo icin gfx1151</strong>
+                        Strix Halo kullaniyorsaniz "gfx1151" gormelisiniz. Eger goruntunmuyorsa WSL2'nin son surumde oldugundan emin olun.
+                    </div>
+                </div>
+
+                <!-- ADIM 5 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div class="step-title">Python Ortami Olustur</div>
+                    </div>
+
+                    <p><strong>5a.</strong> Python ve pip kur:</p>
+                    <pre>sudo apt install -y python3.11 python3.11-venv python3-pip</pre>
+
+                    <p><strong>5b.</strong> Virtual environment olustur:</p>
+                    <pre>python3.11 -m venv ~/finetune-env
+source ~/finetune-env/bin/activate</pre>
+
+                    <p class="cmd-explain">Virtual environment, Python paketlerini izole bir ortamda tutar. Sistemini bozmaz.</p>
+
+                    <p><strong>5c.</strong> pip'i guncelle:</p>
+                    <pre>pip install --upgrade pip wheel setuptools</pre>
+                </div>
+
+                <!-- ADIM 6 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">6</div>
+                        <div class="step-title">PyTorch ROCm Kur</div>
+                    </div>
+
+                    <pre>pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2</pre>
+
+                    <p><strong>Kurulumu test et:</strong></p>
+                    <pre>python -c "import torch; print('PyTorch:', torch.__version__); print('ROCm:', torch.version.hip); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'YOK')"</pre>
+
+                    <div class="expected-output">
+                        <pre>PyTorch: 2.4.0+rocm6.2
+ROCm: 6.2.xxxxx
+GPU: AMD Radeon RX 7900 XTX</pre>
+                    </div>
+
+                    <div class="alert alert-danger">
+                        <strong>GPU "YOK" gozukuyorsa</strong>
+                        <ol>
+                            <li>WSL2'yi kapat: <code>wsl --shutdown</code> (PowerShell'de)</li>
+                            <li>Tekrar ac: Ubuntu uygulamasini baslat</li>
+                            <li>Tekrar dene</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- ADIM 7 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">7</div>
+                        <div class="step-title">Fine-Tuning Araclarini Kur</div>
+                    </div>
+
+                    <p>Temel paketleri kur:</p>
+                    <pre>pip install transformers datasets accelerate peft trl bitsandbytes</pre>
+
+                    <div class="alert alert-warning">
+                        <strong>BitsAndBytes AMD Sorunu</strong>
+                        BitsAndBytes varsayilan olarak CUDA icin derlenmis. AMD'de calismasi icin ozel fork gerekir:
+                        <pre>pip uninstall bitsandbytes -y
+pip install bitsandbytes-rocm</pre>
+                        Eger bu da calismaz ise, 8-bit/4-bit quantization olmadan devam edin (daha fazla bellek kullanir).
+                    </div>
+                </div>
+
+                <!-- ADIM 8 -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">8</div>
+                        <div class="step-title">Kurulumu Dogrula</div>
+                    </div>
+
+                    <p>Her seyin calistigini kontrol et:</p>
+                    <pre>python << 'EOF'
+import torch
+print("=" * 50)
+print("KURULUM KONTROLU")
+print("=" * 50)
+print(f"PyTorch surumu: {torch.__version__}")
+print(f"ROCm mevcut: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print(f"GPU bellegi: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+
+try:
+    import transformers
+    print(f"Transformers: {transformers.__version__}")
+except: print("Transformers: KURULU DEGIL")
+
+try:
+    import peft
+    print(f"PEFT: {peft.__version__}")
+except: print("PEFT: KURULU DEGIL")
+
+try:
+    import trl
+    print(f"TRL: {trl.__version__}")
+except: print("TRL: KURULU DEGIL")
+
+print("=" * 50)
+print("Kurulum basarili!" if torch.cuda.is_available() else "HATA: GPU bulunamadi!")
+EOF</pre>
+
+                    <div class="expected-output">
+                        <pre>==================================================
+KURULUM KONTROLU
+==================================================
+PyTorch surumu: 2.4.0+rocm6.2
+ROCm mevcut: True
+GPU: AMD Radeon RX 7900 XTX
+GPU bellegi: 24.0 GB
+Transformers: 4.46.0
+PEFT: 0.13.0
+TRL: 0.12.0
+==================================================
+Kurulum basarili!</pre>
+                    </div>
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>WSL2 Kurulumu Tamamlandi!</strong>
+                    Simdi <a href="#egitim">Fine-Tuning Yapma</a> bolumune gecebilirsiniz.
+                </div>
+            </section>
+
+            <!-- BOLUM 3: DIRECTML -->
+            <section id="yol2-directml">
+                <h2>3. Yol 2: DirectML (Sadece Inference)</h2>
+
+                <div class="alert alert-danger">
+                    <strong>DIKKAT: DirectML ile Fine-Tuning YAPILAMAZ!</strong>
+                    DirectML sadece hazir modelleri calistirmak icindir. Eger model egitmek istiyorsaniz
+                    <a href="#yol1-wsl2">WSL2 yontemini</a> kullanin.
+                </div>
+
+                <p>DirectML sadece su durumlar icin kullanislidir:</p>
+                <ul>
+                    <li>Hugging Face'ten indirdiginiz bir modeli calistirmak</li>
+                    <li>GGUF formatindaki modelleri llama.cpp ile calistirmak</li>
+                    <li>ONNX modellerini calistirmak</li>
+                </ul>
+
+                <h3>llama.cpp ile Model Calistirma (Egitim Degil)</h3>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">llama.cpp Indir</div>
+                    </div>
+                    <p><a href="https://github.com/ggerganov/llama.cpp/releases" target="_blank">llama.cpp releases</a> sayfasindan
+                    <code>llama-xxx-bin-win-hip-x64.zip</code> dosyasini indir ve bir klasore cikar.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">GGUF Model Indir</div>
+                    </div>
+                    <p><a href="https://huggingface.co/models?sort=trending&search=gguf" target="_blank">Hugging Face</a>'ten
+                    bir GGUF model indir. Ornek:</p>
+                    <pre>llama-3.2-3b-instruct-q4_k_m.gguf</pre>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Modeli Calistir</div>
+                    </div>
+                    <pre>llama-cli.exe -m llama-3.2-3b-instruct-q4_k_m.gguf -p "Merhaba, nasilsin?" -n 100</pre>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>Sonuc:</strong> DirectML ile model calistirabilirsiniz ama egitemezsiniz.
+                    Fine-tuning icin WSL2 veya Linux kullanmalisiniz.
+                </div>
+            </section>
+
+            <!-- BOLUM 4: EGITIM -->
+            <section id="egitim">
+                <h2>4. Fine-Tuning Yapma</h2>
+
+                <div class="alert alert-info">
+                    <strong>Not:</strong> Bu bolum WSL2 kurulumunu tamamladiginizi varsayar.
+                    Eger WSL2 kurmadiysiniz, once <a href="#yol1-wsl2">o bolumu</a> tamamlayin.
+                </div>
+
+                <!-- ADIM 1: DATASET -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Dataset Olustur</div>
+                    </div>
+
+                    <p>Fine-tuning icin verilerinizi JSON formatinda hazirlamaniz gerekir. Her ornek su formatta olmali:</p>
+
+                    <pre>{
+  "instruction": "Ne yapmasi gerektigini acikla",
+  "input": "Eger ek bilgi varsa buraya yaz (bos olabilir)",
+  "output": "Modelin vermesi gereken cevap"
+}</pre>
+
+                    <p><strong>Ornek dataset olusturalim:</strong></p>
+                    <p>Asagidaki Python kodunu calistirin (WSL2 Ubuntu'da):</p>
+
+                    <pre>cat > dataset.json << 'EOF'
+[
+  {
+    "instruction": "Bu soruyu yanitla.",
+    "input": "Python nedir?",
+    "output": "Python, 1991 yilinda Guido van Rossum tarafindan gelistirilmis, okunmasi kolay ve genel amacli bir programlama dilidir. Web gelistirme, veri bilimi, yapay zeka ve otomasyon gibi alanlarda yaygin kullanilir."
+  },
+  {
+    "instruction": "Verilen konuyu acikla.",
+    "input": "Fine-tuning nedir?",
+    "output": "Fine-tuning, onceden egitilmis bir yapay zeka modelini belirli bir gorev veya veri seti uzerinde yeniden egitme islemidir. Bu sayede model, genel bilgisini korurken ozel bir alanda uzmanlasmis olur."
+  },
+  {
+    "instruction": "Ceviri yap.",
+    "input": "Hello, how are you?",
+    "output": "Merhaba, nasilsin?"
+  },
+  {
+    "instruction": "Kod acikla.",
+    "input": "print('Merhaba')",
+    "output": "Bu Python kodu, ekrana 'Merhaba' yazisini yazdirir. print() fonksiyonu, icine verilen metni konsola cikti olarak gosterir."
+  },
+  {
+    "instruction": "Ozet cikar.",
+    "input": "Linux, 1991 yilinda Linus Torvalds tarafindan gelistirilmis acik kaynakli bir isletim sistemi cekirdegi. Gunumuzde dunyanin en cok kullanilan sunucu isletim sistemidir. Android telefonlar da Linux cekirdegi uzerine kurulu.",
+    "output": "Linux, 1991'de gelistirilmis acik kaynakli bir isletim sistemi cekirdegi olup sunucularda ve Android'de yaygin kullanilir."
+  }
+]
+EOF
+
+echo "dataset.json olusturuldu!"</pre>
+
+                    <div class="alert alert-warning">
+                        <strong>Gercek Kullanim Icin:</strong>
+                        Bu sadece ornek. Gercek fine-tuning icin en az 100-1000 ornek vermeniz gerekir.
+                        Ornek sayisi arttikca model daha iyi ogrenr.
+                    </div>
+                </div>
+
+                <!-- ADIM 2: EGITIM KODU -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Egitim Kodunu Olustur</div>
+                    </div>
+
+                    <p>Asagidaki kodu <code>train.py</code> olarak kaydedin:</p>
+
+                    <pre>cat > train.py << 'EOF'
+"""
+AMD GPU icin Fine-Tuning Script
+Llama 3.2 3B modelini QLoRA ile egitir
+"""
+
+import torch
+from datasets import load_dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    BitsAndBytesConfig
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from trl import SFTTrainer
+
+# =================================================================
+# AYARLAR - Bunlari ihtiyacina gore degistir
+# =================================================================
+MODEL_ADI = "meta-llama/Llama-3.2-3B-Instruct"  # Kullanilacak model
+DATASET_DOSYASI = "dataset.json"                # Dataset dosyasi
+CIKTI_KLASORU = "./egitilmis-model"             # Kaydedilecek yer
+EPOCH_SAYISI = 3                                 # Kac tur egitim
+BATCH_BOYUTU = 1                                 # GPU bellegine gore ayarla
+OGRENME_HIZI = 2e-4                             # Learning rate
+
+# =================================================================
+# 1. GPU KONTROLU
+# =================================================================
+print("=" * 60)
+print("GPU Kontrolu")
+print("=" * 60)
+
+if not torch.cuda.is_available():
+    print("HATA: GPU bulunamadi! ROCm kurulumunu kontrol edin.")
+    exit(1)
+
+gpu_adi = torch.cuda.get_device_name(0)
+gpu_bellek = torch.cuda.get_device_properties(0).total_memory / 1024**3
+print(f"GPU: {gpu_adi}")
+print(f"Bellek: {gpu_bellek:.1f} GB")
+
+# =================================================================
+# 2. MODEL YUKLEME
+# =================================================================
+print("\n" + "=" * 60)
+print("Model Yukleniyor...")
+print("=" * 60)
+
+# 4-bit quantization (bellek tasarrufu)
+# NOT: BitsAndBytes AMD'de sorunlu olabilir
+# Sorun yasarsaniz quantization_config satirini kaldiirin
+try:
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4"
+    )
+    USE_4BIT = True
+    print("4-bit quantization etkin")
+except Exception as e:
+    print(f"4-bit yuklenemedi: {e}")
+    print("Quantization olmadan devam ediliyor...")
+    quantization_config = None
+    USE_4BIT = False
+
+# Modeli yukle
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ADI,
+    quantization_config=quantization_config if USE_4BIT else None,
+    device_map="auto",
+    torch_dtype=torch.float16,
+    trust_remote_code=True,
+)
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ADI)
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
+
+print(f"Model yuklendi: {MODEL_ADI}")
+
+# =================================================================
+# 3. LORA AYARLARI
+# =================================================================
+print("\n" + "=" * 60)
+print("LoRA Hazirlaniyor...")
+print("=" * 60)
+
+if USE_4BIT:
+    model = prepare_model_for_kbit_training(model)
+
+lora_config = LoraConfig(
+    r=16,                          # LoRA rank - dusuk = az parametre
+    lora_alpha=32,                 # LoRA alpha
+    target_modules=[               # Hangi katmanlar egitilecek
+        "q_proj", "k_proj", "v_proj", "o_proj",
+        "gate_proj", "up_proj", "down_proj"
+    ],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+# =================================================================
+# 4. DATASET YUKLEME
+# =================================================================
+print("\n" + "=" * 60)
+print("Dataset Yukleniyor...")
+print("=" * 60)
+
+dataset = load_dataset("json", data_files=DATASET_DOSYASI, split="train")
+print(f"Toplam ornek: {len(dataset)}")
+
+# Prompt formati
+def format_prompt(example):
+    if example["input"]:
+        text = f"""### Talimat:
+{example["instruction"]}
+
+### Girdi:
+{example["input"]}
+
+### Cevap:
+{example["output"]}"""
+    else:
+        text = f"""### Talimat:
+{example["instruction"]}
+
+### Cevap:
+{example["output"]}"""
+    return {"text": text}
+
+dataset = dataset.map(format_prompt)
+
+# =================================================================
+# 5. EGITIM
+# =================================================================
+print("\n" + "=" * 60)
+print("Egitim Basliyor...")
+print("=" * 60)
+
+training_args = TrainingArguments(
+    output_dir=CIKTI_KLASORU,
+    num_train_epochs=EPOCH_SAYISI,
+    per_device_train_batch_size=BATCH_BOYUTU,
+    gradient_accumulation_steps=4,
+    learning_rate=OGRENME_HIZI,
+    weight_decay=0.01,
+    warmup_ratio=0.03,
+    logging_steps=1,
+    save_strategy="epoch",
+    fp16=True,                     # AMD icin FP16
+    optim="adamw_torch",
+    lr_scheduler_type="cosine",
+    seed=42,
+    report_to="none",              # WandB kapatildi
+)
+
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+    dataset_text_field="text",
+    max_seq_length=512,
+)
+
+# Egitimi baslat
+trainer.train()
+
+# =================================================================
+# 6. KAYDETME
+# =================================================================
+print("\n" + "=" * 60)
+print("Model Kaydediliyor...")
+print("=" * 60)
+
+trainer.save_model(CIKTI_KLASORU)
+tokenizer.save_pretrained(CIKTI_KLASORU)
+
+print(f"\nModel kaydedildi: {CIKTI_KLASORU}")
+print("\n" + "=" * 60)
+print("EGITIM TAMAMLANDI!")
+print("=" * 60)
+EOF
+
+echo "train.py olusturuldu!"</pre>
+                </div>
+
+                <!-- ADIM 3: EGITIMI CALISTIR -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Egitimi Baslat</div>
+                    </div>
+
+                    <p>Virtual environment aktif oldugundan emin ol ve egitimi baslat:</p>
+
+                    <pre>source ~/finetune-env/bin/activate
+python train.py</pre>
+
+                    <div class="expected-output">
+                        <pre>============================================================
+GPU Kontrolu
+============================================================
+GPU: AMD Radeon RX 7900 XTX
+Bellek: 24.0 GB
+
+============================================================
+Model Yukleniyor...
+============================================================
+4-bit quantization etkin
+Model yuklendi: meta-llama/Llama-3.2-3B-Instruct
+
+============================================================
+LoRA Hazirlaniyor...
+============================================================
+trainable params: 13,631,488 || all params: 3,226,533,888 || trainable%: 0.4224
+
+============================================================
+Dataset Yukleniyor...
+============================================================
+Toplam ornek: 5
+
+============================================================
+Egitim Basliyor...
+============================================================
+{'loss': 2.3456, 'learning_rate': 0.0002, 'epoch': 0.25}
+{'loss': 1.8234, 'learning_rate': 0.00018, 'epoch': 0.5}
+...
+
+============================================================
+EGITIM TAMAMLANDI!
+============================================================</pre>
+                    </div>
+                </div>
+
+                <!-- ADIM 4: TEST -->
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Egitilmis Modeli Test Et</div>
+                    </div>
+
+                    <pre>cat > test.py << 'EOF'
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+import torch
+
+print("Model yukleniyor...")
+
+# Base model
+base_model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.2-3B-Instruct",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# LoRA adaptoru ekle
+model = PeftModel.from_pretrained(base_model, "./egitilmis-model")
+tokenizer = AutoTokenizer.from_pretrained("./egitilmis-model")
+
+print("Model yuklendi!\n")
+
+# Test
+prompt = """### Talimat:
+Bu soruyu yanitla.
+
+### Girdi:
+Fine-tuning nedir?
+
+### Cevap:
+"""
+
+inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+outputs = model.generate(**inputs, max_new_tokens=200, do_sample=True, temperature=0.7)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+EOF
+
+python test.py</pre>
+                </div>
+            </section>
+
+            <!-- BOLUM 5: EXPORT -->
+            <section id="export">
+                <h2>5. Modeli Kaydetme ve Export</h2>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">GGUF Formatina Cevirme (llama.cpp icin)</div>
+                    </div>
+
+                    <p>llama.cpp veya Ollama'da kullanmak icin GGUF formatina cevirmeniz gerekir:</p>
+
+                    <pre># llama.cpp'yi indir
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+
+# Gereksinimleri kur
+pip install -r requirements.txt
+
+# Oncelikle LoRA'yi base modelle birlestir
+# (Bu islemi ayri bir script ile yapmalisiniz)
+
+# GGUF'a cevir
+python convert_hf_to_gguf.py ../merged-model --outfile model.gguf
+
+# Quantize et (boyut kucultme)
+make -j
+./llama-quantize model.gguf model-q4_k_m.gguf Q4_K_M</pre>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Hugging Face'e Yukleme</div>
+                    </div>
+
+                    <pre>pip install huggingface_hub
+
+huggingface-cli login  # Token'inizi girin
+
+python << 'EOF'
+from huggingface_hub import HfApi
+
+api = HfApi()
+api.upload_folder(
+    folder_path="./egitilmis-model",
+    repo_id="KULLANICI_ADINIZ/model-adiniz",
+    repo_type="model",
+)
+print("Yukleme tamamlandi!")
+EOF</pre>
+                </div>
+            </section>
+
+            <!-- BOLUM 6: SORUN GIDERME -->
+            <section id="sorunlar">
+                <h2>6. Sorun Giderme</h2>
+
+                <h3>GPU bulunamadi hatasi</h3>
+                <div class="step">
+                    <p><strong>Belirti:</strong> <code>torch.cuda.is_available()</code> False donuyor</p>
+                    <p><strong>Cozum:</strong></p>
+                    <pre># WSL2'yi yeniden baslat
+wsl --shutdown  # PowerShell'de calistir
+# Sonra Ubuntu'yu tekrar ac
+
+# ROCm kurulumunu kontrol et
+rocminfo | grep "Name:"
+
+# PyTorch'u yeniden kur
+pip uninstall torch -y
+pip install torch --index-url https://download.pytorch.org/whl/rocm6.2</pre>
+                </div>
+
+                <h3>Bellek yetersiz (Out of Memory)</h3>
+                <div class="step">
+                    <p><strong>Belirti:</strong> <code>CUDA out of memory</code> hatasi</p>
+                    <p><strong>Cozum:</strong></p>
+                    <ul>
+                        <li><code>BATCH_BOYUTU</code>'nu 1'e dusur</li>
+                        <li><code>max_seq_length</code>'i 256'ya dusur</li>
+                        <li>Daha kucuk model dene (ornegin 1B)</li>
+                        <li>gradient_accumulation_steps'i artir</li>
+                    </ul>
+                </div>
+
+                <h3>BitsAndBytes calismiyot</h3>
+                <div class="step">
+                    <p><strong>Belirti:</strong> <code>bitsandbytes</code> CUDA hatasi veriyor</p>
+                    <p><strong>Cozum:</strong> Quantization olmadan devam edin:</p>
+                    <pre># train.py'de su satiri degistir:
+quantization_config = None
+USE_4BIT = False</pre>
+                    <p>Bu daha fazla GPU bellegi kullanir ama calisir.</p>
+                </div>
+
+                <h3>Strix Halo (gfx1151) gorunmuyor</h3>
+                <div class="step">
+                    <p><strong>Cozum:</strong></p>
+                    <pre># ROCm surumund kontrol et (6.2+ olmali)
+apt list --installed | grep rocm
+
+# HSA_OVERRIDE_GFX_VERSION dene
+export HSA_OVERRIDE_GFX_VERSION=11.0.0
+python train.py</pre>
+                </div>
+            </section>
+
+            <!-- SON -->
+            <div class="alert alert-success">
+                <strong>Tebrikler!</strong>
+                Windows + AMD GPU ile fine-tuning rehberini tamamladiniz.
+                Sorulariniz icin <a href="https://github.com/ROCm/ROCm/issues" target="_blank">ROCm GitHub</a> sayfasina bakin.
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p><a href="index.html">Ana Sayfa</a> | <a href="linux-amd.html">Linux + AMD Rehberi</a></p>
+        </div>
+    </footer>
+</body>
+</html>
