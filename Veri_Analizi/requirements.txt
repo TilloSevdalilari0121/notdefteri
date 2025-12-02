@@ -1,0 +1,6 @@
+# Programlama Dilleri İstatistik Dashboard
+# Gerekli Python paketleri
+
+PyQt5>=5.15.0
+matplotlib>=3.5.0
+numpy>=1.21.0
